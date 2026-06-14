@@ -12,7 +12,10 @@
       "name": "Webhook Chat Kommo",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [200, 300],
+      "position": [
+        200,
+        300
+      ],
       "notes": "Kommo > Ajustes > Webhooks > evento 'Mensaje entrante / Chat' apuntando a /webhook/kommo-chat-inbound. Kommo envia form-urlencoded con claves tipo message[add][0][text]."
     },
     {
@@ -23,7 +26,10 @@
       "name": "Parsear webhook entrante",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [420, 300]
+      "position": [
+        420,
+        300
+      ]
     },
     {
       "parameters": {
@@ -37,9 +43,18 @@
       "name": "GET Lead con contactos",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [640, 300],
+      "position": [
+        640,
+        300
+      ],
       "onError": "continueRegularOutput",
-      "notes": "leads/{id}?with=contacts devuelve _embedded.contacts pero SOLO id + is_main (sin custom_fields). El telefono se lee en el GET de contacto siguiente."
+      "notes": "leads/{id}?with=contacts devuelve _embedded.contacts pero SOLO id + is_main (sin custom_fields). El telefono se lee en el GET de contacto siguiente.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F9TW6Fo6bqofPvXr",
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {
@@ -49,7 +64,10 @@
       "name": "Elegir contacto",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [860, 300]
+      "position": [
+        860,
+        300
+      ]
     },
     {
       "parameters": {
@@ -63,8 +81,17 @@
       "name": "GET Contacto (telefono)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1080, 300],
-      "onError": "continueRegularOutput"
+      "position": [
+        1080,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F9TW6Fo6bqofPvXr",
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {
@@ -74,16 +101,29 @@
       "name": "Extraer y normalizar telefono",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1300, 300]
+      "position": [
+        1300,
+        300
+      ]
     },
     {
       "parameters": {
         "operation": "update",
-        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
-        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
         "columns": {
           "mappingMode": "defineBelow",
-          "matchingColumns": ["ref_code"],
+          "matchingColumns": [
+            "ref_code"
+          ],
           "value": {
             "ref_code": "={{ $json.ref_code }}",
             "telefono": "={{ $json.telefono }}",
@@ -97,18 +137,89 @@
       "name": "Upsert telefono por ref_code",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [1520, 300],
-      "notes": "UPDATE (no append) emparejando por ref_code. Escribe solo la fila exacta del lead, sin importar numeros duplicados."
+      "position": [
+        1520,
+        300
+      ],
+      "notes": "UPDATE (no append) emparejando por ref_code. Escribe solo la fila exacta del lead, sin importar numeros duplicados.",
+      "credentials": {
+        "googleApi": {
+          "id": "2awdtPjJDvJMLOsi",
+          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
+        }
+      }
     }
   ],
   "connections": {
-    "Webhook Chat Kommo": { "main": [[{ "node": "Parsear webhook entrante", "type": "main", "index": 0 }]] },
-    "Parsear webhook entrante": { "main": [[{ "node": "GET Lead con contactos", "type": "main", "index": 0 }]] },
-    "GET Lead con contactos": { "main": [[{ "node": "Elegir contacto", "type": "main", "index": 0 }]] },
-    "Elegir contacto": { "main": [[{ "node": "GET Contacto (telefono)", "type": "main", "index": 0 }]] },
-    "GET Contacto (telefono)": { "main": [[{ "node": "Extraer y normalizar telefono", "type": "main", "index": 0 }]] },
-    "Extraer y normalizar telefono": { "main": [[{ "node": "Upsert telefono por ref_code", "type": "main", "index": 0 }]] }
+    "Webhook Chat Kommo": {
+      "main": [
+        [
+          {
+            "node": "Parsear webhook entrante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear webhook entrante": {
+      "main": [
+        [
+          {
+            "node": "GET Lead con contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Lead con contactos": {
+      "main": [
+        [
+          {
+            "node": "Elegir contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir contacto": {
+      "main": [
+        [
+          {
+            "node": "GET Contacto (telefono)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Contacto (telefono)": {
+      "main": [
+        [
+          {
+            "node": "Extraer y normalizar telefono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer y normalizar telefono": {
+      "main": [
+        [
+          {
+            "node": "Upsert telefono por ref_code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "pinData": {}
 }

@@ -12,7 +12,10 @@
       "name": "Webhook Lead DOOH",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [220, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -29,15 +32,32 @@
       "name": "Crear lead en Kommo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "notesInFlow": true,
-      "notes": "La respuesta de /leads/complex es un ARRAY [{id, contact_id, ...}]. n8n entrega el primer elemento como item: $json.id y $json.contact_id estan disponibles."
+      "notes": "La respuesta de /leads/complex es un ARRAY [{id, contact_id, ...}]. n8n entrega el primer elemento como item: $json.id y $json.contact_id estan disponibles.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F9TW6Fo6bqofPvXr",
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {
         "operation": "append",
-        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
-        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -61,17 +81,32 @@
       "name": "Log en Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [700, 300],
-      "notes": "CAMBIOS v2: guarda kommo_contact (adaptado) + ref_code, deja telefono vacio y unifica estado a 'esperando_chat'. El telefono lo rellena la captura (1a) o el barrido (2a)."
+      "position": [
+        700,
+        300
+      ],
+      "notes": "CAMBIOS v2: guarda kommo_contact (adaptado) + ref_code, deja telefono vacio y unifica estado a 'esperando_chat'. El telefono lo rellena la captura (1a) o el barrido (2a).",
+      "credentials": {
+        "googleApi": {
+          "id": "2awdtPjJDvJMLOsi",
+          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
+        }
+      }
     },
     {
       "parameters": {
         "conditions": {
           "string": [
-            { "value1": "={{ $('Webhook Lead DOOH').item.json.body.email }}", "operation": "isNotEmpty" }
+            {
+              "value1": "={{ $('Webhook Lead DOOH').item.json.body.email }}",
+              "operation": "isNotEmpty"
+            }
           ],
           "boolean": [
-            { "value1": "={{ $('Webhook Lead DOOH').item.json.body.consentimiento == true || $('Webhook Lead DOOH').item.json.body.consentimiento === 'true' }}", "value2": true }
+            {
+              "value1": "={{ $('Webhook Lead DOOH').item.json.body.consentimiento == true || $('Webhook Lead DOOH').item.json.body.consentimiento === 'true' }}",
+              "value2": true
+            }
           ]
         }
       },
@@ -79,19 +114,27 @@
       "name": "Tiene email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [920, 300]
+      "position": [
+        920,
+        300
+      ]
     },
     {
       "parameters": {
         "url": "={{ $env.BRIEF_PDF_URL || 'https://leads.centauroads.com/brief-centauro.pdf' }}",
         "responseFormat": "file",
-        "options": { "responsePropertyName": "brief_pdf" }
+        "options": {
+          "responsePropertyName": "brief_pdf"
+        }
       },
       "id": "descargar-pdf",
       "name": "Descargar Brief PDF",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1140, 200]
+      "position": [
+        1140,
+        200
+      ]
     },
     {
       "parameters": {
@@ -100,7 +143,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
           ]
         },
         "sendBody": true,
@@ -112,17 +158,73 @@
       "name": "Enviar brief por Resend",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1360, 200],
+      "position": [
+        1360,
+        200
+      ],
       "notes": "Usa la API de Resend para enviar correos transaccionales con el PDF adjunto."
     }
   ],
   "connections": {
-    "Webhook Lead DOOH": { "main": [[{ "node": "Crear lead en Kommo", "type": "main", "index": 0 }]] },
-    "Crear lead en Kommo": { "main": [[{ "node": "Log en Google Sheets", "type": "main", "index": 0 }]] },
-    "Log en Google Sheets": { "main": [[{ "node": "Tiene email?", "type": "main", "index": 0 }]] },
-    "Tiene email?": { "main": [[{ "node": "Descargar Brief PDF", "type": "main", "index": 0 }], []] },
-    "Descargar Brief PDF": { "main": [[{ "node": "Enviar brief por Resend", "type": "main", "index": 0 }]] }
+    "Webhook Lead DOOH": {
+      "main": [
+        [
+          {
+            "node": "Crear lead en Kommo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear lead en Kommo": {
+      "main": [
+        [
+          {
+            "node": "Log en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log en Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Tiene email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene email?": {
+      "main": [
+        [
+          {
+            "node": "Descargar Brief PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Descargar Brief PDF": {
+      "main": [
+        [
+          {
+            "node": "Enviar brief por Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "pinData": {}
 }

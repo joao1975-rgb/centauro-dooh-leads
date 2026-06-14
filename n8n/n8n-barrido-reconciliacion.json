@@ -3,26 +3,53 @@
   "nodes": [
     {
       "parameters": {
-        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] }
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
       },
       "id": "cron-15m",
       "name": "Cada 15 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [200, 300]
+      "position": [
+        200,
+        300
+      ]
     },
     {
       "parameters": {
         "operation": "read",
-        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
-        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
         "options": {}
       },
       "id": "sheets-read",
       "name": "Leer toda la hoja",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [420, 300]
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "2awdtPjJDvJMLOsi",
+          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
+        }
+      }
     },
     {
       "parameters": {
@@ -32,7 +59,10 @@
       "name": "Filtrar pendientes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [640, 300]
+      "position": [
+        640,
+        300
+      ]
     },
     {
       "parameters": {
@@ -46,8 +76,17 @@
       "name": "GET Lead con contactos",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [860, 300],
-      "onError": "continueRegularOutput"
+      "position": [
+        860,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F9TW6Fo6bqofPvXr",
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {
@@ -57,7 +96,10 @@
       "name": "Elegir contacto barrido",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1080, 300]
+      "position": [
+        1080,
+        300
+      ]
     },
     {
       "parameters": {
@@ -71,8 +113,17 @@
       "name": "GET Contacto (telefono)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1300, 300],
-      "onError": "continueRegularOutput"
+      "position": [
+        1300,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F9TW6Fo6bqofPvXr",
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {
@@ -82,16 +133,29 @@
       "name": "Resolver telefono o expirar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1520, 300]
+      "position": [
+        1520,
+        300
+      ]
     },
     {
       "parameters": {
         "operation": "update",
-        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
-        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
         "columns": {
           "mappingMode": "defineBelow",
-          "matchingColumns": ["kommo_lead_id"],
+          "matchingColumns": [
+            "kommo_lead_id"
+          ],
           "value": {
             "kommo_lead_id": "={{ $json.kommo_lead_id }}",
             "telefono": "={{ $json.telefono }}",
@@ -105,18 +169,99 @@
       "name": "Upsert por kommo_lead_id",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [1740, 300]
+      "position": [
+        1740,
+        300
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "2awdtPjJDvJMLOsi",
+          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
+        }
+      }
     }
   ],
   "connections": {
-    "Cada 15 minutos": { "main": [[{ "node": "Leer toda la hoja", "type": "main", "index": 0 }]] },
-    "Leer toda la hoja": { "main": [[{ "node": "Filtrar pendientes", "type": "main", "index": 0 }]] },
-    "Filtrar pendientes": { "main": [[{ "node": "GET Lead con contactos", "type": "main", "index": 0 }]] },
-    "GET Lead con contactos": { "main": [[{ "node": "Elegir contacto barrido", "type": "main", "index": 0 }]] },
-    "Elegir contacto barrido": { "main": [[{ "node": "GET Contacto (telefono)", "type": "main", "index": 0 }]] },
-    "GET Contacto (telefono)": { "main": [[{ "node": "Resolver telefono o expirar", "type": "main", "index": 0 }]] },
-    "Resolver telefono o expirar": { "main": [[{ "node": "Upsert por kommo_lead_id", "type": "main", "index": 0 }]] }
+    "Cada 15 minutos": {
+      "main": [
+        [
+          {
+            "node": "Leer toda la hoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer toda la hoja": {
+      "main": [
+        [
+          {
+            "node": "Filtrar pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar pendientes": {
+      "main": [
+        [
+          {
+            "node": "GET Lead con contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Lead con contactos": {
+      "main": [
+        [
+          {
+            "node": "Elegir contacto barrido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir contacto barrido": {
+      "main": [
+        [
+          {
+            "node": "GET Contacto (telefono)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Contacto (telefono)": {
+      "main": [
+        [
+          {
+            "node": "Resolver telefono o expirar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolver telefono o expirar": {
+      "main": [
+        [
+          {
+            "node": "Upsert por kommo_lead_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "pinData": {}
 }
