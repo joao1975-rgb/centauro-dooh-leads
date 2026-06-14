@@ -286,10 +286,11 @@
     {
       "parameters": {
         "conditions": {
-          "boolean": [
+          "string": [
             {
-              "value1": "={{ !!$json.id }}",
-              "value2": true
+              "value1": "={{ $json.id ? 'succeeded' : 'failed' }}",
+              "operation": "equal",
+              "value2": "succeeded"
             }
           ]
         }
