@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anuncia en nuestras pantallas | Centauro Ads</title>
+<style>
+  :root{--brand:#e8541d;--dark:#1a1a2e;--ok:#25D366}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+  body{background:var(--dark);color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+  .card{background:#fff;color:var(--dark);border-radius:16px;padding:28px 22px;width:100%;max-width:420px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  h1{font-size:1.35rem;line-height:1.25;margin-bottom:6px}
+  p.sub{color:#555;font-size:.95rem;margin-bottom:20px}
+  label{display:block;font-size:.85rem;font-weight:600;margin:14px 0 4px}
+  input{width:100%;padding:13px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:1rem}
+  input:focus{outline:none;border-color:var(--brand)}
+  .consent{display:flex;gap:8px;align-items:flex-start;margin-top:16px;font-size:.78rem;color:#666}
+  .consent input{width:auto;margin-top:2px}
+  button{width:100%;margin-top:20px;padding:15px;border:none;border-radius:12px;background:var(--ok);color:#fff;font-size:1.05rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  button:disabled{opacity:.6}
+  .hint{text-align:center;font-size:.75rem;color:#888;margin-top:10px}
+  .logo{margin-bottom:18px;font-weight:800;letter-spacing:.5px;color:var(--brand);font-size:1.1rem}
+</style>
+</head>
+<body>
+<div class="logo">CENTAURO ADS</div>
+<div class="card">
+  <h1>Recibe el brief de nuestras pantallas LED y TOTEMs</h1>
+  <p class="sub">2 datos y seguimos por WhatsApp. Sin esperas, sin spam.</p>
+  <form id="leadForm">
+    <label for="nombre">Tu nombre</label>
+    <input id="nombre" name="nombre" required autocomplete="name" placeholder="Ej: Maria Perez">
+    <label for="empresa">Empresa o negocio</label>
+    <input id="empresa" name="empresa" required autocomplete="organization" placeholder="Ej: Inversiones MP">
+    <label for="email">Email <span style="font-weight:400;color:#999">(opcional)</span></label>
+    <input id="email" name="email" type="email" autocomplete="email" placeholder="Para enviarte el brief tambien por correo">
+    <div class="consent">
+      <input type="checkbox" id="consent" required>
+      <label for="consent" style="margin:0;font-weight:400">Acepto que Centauro Ads me contacte por WhatsApp y/o email con informacion de sus pantallas. <a href="/privacidad.html" style="color:var(--brand)">Aviso de privacidad</a></label>
+    </div>
+    <button type="submit" id="btn">Continuar por WhatsApp</button>
+    <div class="hint">Se abrira tu WhatsApp con el mensaje listo. Tu decides enviarlo.</div>
+  </form>
+</div>
+<script>
+// ====================== CONFIGURACION ======================
+const N8N_WEBHOOK = "https://TU-N8N.tudominio.com/webhook/lead-dooh"; // URL del webhook en n8n
+const WHATSAPP    = "584242644335"; // WhatsApp Business app (0424-2644335) en formato internacional
+// ============================================================
+
+// ID de la pantalla de origen: el QR dinamico debe apuntar a /index.html?screen=TOTEM_CCS_01
+const params   = new URLSearchParams(location.search);
+const screenId = params.get("screen") || "desconocida";
+
+document.getElementById("leadForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("btn");
+  btn.disabled = true; btn.textContent = "Abriendo WhatsApp...";
+
+  const data = {
+    nombre:  document.getElementById("nombre").value.trim(),
+    empresa: document.getElementById("empresa").value.trim(),
+    email:   document.getElementById("email").value.trim(),
+    screen_id: screenId,
+    consentimiento: document.getElementById("consent").checked,
+    timestamp: new Date().toISOString(),
+    user_agent: navigator.userAgent
+  };
+
+  // Registrar el lead en n8n SIN bloquear la redireccion (sendBeacon sobrevive al cambio de pagina)
+  try {
+    navigator.sendBeacon(N8N_WEBHOOK, new Blob([JSON.stringify(data)], {type:"application/json"}));
+  } catch(_) {
+    fetch(N8N_WEBHOOK, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data), keepalive:true}).catch(()=>{});
+  }
+
+  // Redirigir a WhatsApp con mensaje prellenado (el usuario inicia el chat = cero riesgo de spam)
+  const msg = "Hola, soy " + data.nombre + " de " + data.empresa + ". Escanee el QR de su pantalla (" + screenId + ") y quiero recibir el brief de pantallas LED y TOTEMs.";
+  setTimeout(() => { location.href = "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(msg); }, 300);
+});
+</script>
+</body>
+</html>

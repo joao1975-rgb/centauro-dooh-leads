@@ -1,0 +1,428 @@
+{
+  "updatedAt": "2026-06-11T11:06:50.882Z",
+  "createdAt": "2026-06-11T03:03:42.205Z",
+  "id": "Ah22xO6SDLqXSSCT",
+  "name": "DOOH Leads - Escenario 2 (API + Kommo) [PROD]",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-dooh-api",
+        "options": {}
+      },
+      "id": "webhook-lead-api",
+      "name": "Webhook Lead DOOH",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        224,
+        304
+      ],
+      "webhookId": "62399681-4dd2-4d67-9f67-57ab2f9829cb"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://centauroadss.kommo.com/api/v4/leads/complex",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\n  \"name\": \"DOOH [{{ $json.body.tipo_dispositivo }}] {{ $json.body.screen_id }} - {{ $json.body.empresa }}\",\n  \"pipeline_id\": 13925343,\n  \"_embedded\": {\n    \"contacts\": [{\n      \"first_name\": \"{{ $json.body.nombre }}\",\n      \"custom_fields_values\": [\n        { \"field_code\": \"EMAIL\", \"values\": [{ \"value\": \"{{ $json.body.email }}\", \"enum_code\": \"WORK\" }] }\n      ]\n    }],\n    \"companies\": [{ \"name\": \"{{ $json.body.empresa }}\" }]\n  },\n  \"custom_fields_values\": [\n    { \"field_id\": 1795614, \"values\": [{ \"value\": \"{{ $json.body.screen_id }}\" }] },\n    { \"field_id\": 1795616, \"values\": [{ \"value\": \"{{ $json.body.tipo_dispositivo }}\" }] }\n  ]\n}]",
+        "options": {}
+      },
+      "id": "kommo-lead",
+      "name": "Crear lead en Kommo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        464,
+        304
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "F9TW6Fo6bqofPvXr",
+          "name": "Header Auth account 3"
+        }
+      },
+      "notes": "Credencial: Header Auth -> Authorization: Bearer TU_TOKEN_KOMMO (token de larga duracion)."
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "sheets-log-2",
+      "name": "Log en Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        704,
+        304
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "2awdtPjJDvJMLOsi",
+          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('Webhook Lead DOOH').item.json.body.email }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "if-email-2",
+      "name": "Tiene email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        928,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook Lead DOOH').item.json.body.email }}",
+        "subject": "Brief de pantallas LED y TOTEMs - Centauro Ads",
+        "message": "Hola {{ $('Webhook Lead DOOH').item.json.body.nombre }},<br><br>Gracias por tu interes en nuestras pantallas publicitarias DOOH.<br><br>Puedes descargar y ver la presentacion del brief interactivo aqui:<br><br><strong><a href=\"https://links.centauroads.com/oferta-dooh\">Ver Brief en Canva</a></strong><br><br>Tambien te atenderemos en breve por WhatsApp desde nuestra linea verificada para responder cualquier pregunta o cotizacion.<br><br>Atentamente,<br>El equipo de Centauro Ads",
+        "options": {}
+      },
+      "id": "gmail-brief-2",
+      "name": "Enviar brief por email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1152,
+        208
+      ],
+      "webhookId": "1e085181-488c-47b0-916c-1113c9800e8b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CWKUORKGFGMUeDCC",
+          "name": "N8N-email-eli"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Lead DOOH": {
+      "main": [
+        [
+          {
+            "node": "Crear lead en Kommo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear lead en Kommo": {
+      "main": [
+        [
+          {
+            "node": "Log en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log en Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Tiene email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene email?": {
+      "main": [
+        [
+          {
+            "node": "Enviar brief por email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "1363cdd9-ba10-4efc-aeab-23e44b15d6f3",
+  "activeVersionId": "1363cdd9-ba10-4efc-aeab-23e44b15d6f3",
+  "versionCounter": 57,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-11T03:03:42.211Z",
+      "createdAt": "2026-06-11T03:03:42.211Z",
+      "role": "workflow:owner",
+      "workflowId": "Ah22xO6SDLqXSSCT",
+      "projectId": "bqxro2iGq6oj2lvY",
+      "project": {
+        "updatedAt": "2026-01-23T02:55:02.386Z",
+        "createdAt": "2026-01-23T02:54:01.180Z",
+        "id": "bqxro2iGq6oj2lvY",
+        "name": "Joao Nelo <centauroadss@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      }
+    }
+  ],
+  "tags": [],
+  "parentFolder": null,
+  "activeVersion": {
+    "updatedAt": "2026-06-11T11:06:50.883Z",
+    "createdAt": "2026-06-11T11:06:50.883Z",
+    "versionId": "1363cdd9-ba10-4efc-aeab-23e44b15d6f3",
+    "workflowId": "Ah22xO6SDLqXSSCT",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "lead-dooh-api",
+          "options": {}
+        },
+        "id": "webhook-lead-api",
+        "name": "Webhook Lead DOOH",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          224,
+          304
+        ],
+        "webhookId": "62399681-4dd2-4d67-9f67-57ab2f9829cb"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://centauroadss.kommo.com/api/v4/leads/complex",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "=[{\n  \"name\": \"DOOH [{{ $json.body.tipo_dispositivo }}] {{ $json.body.screen_id }} - {{ $json.body.empresa }}\",\n  \"pipeline_id\": 13925343,\n  \"_embedded\": {\n    \"contacts\": [{\n      \"first_name\": \"{{ $json.body.nombre }}\",\n      \"custom_fields_values\": [\n        { \"field_code\": \"EMAIL\", \"values\": [{ \"value\": \"{{ $json.body.email }}\", \"enum_code\": \"WORK\" }] }\n      ]\n    }],\n    \"companies\": [{ \"name\": \"{{ $json.body.empresa }}\" }]\n  },\n  \"custom_fields_values\": [\n    { \"field_id\": 1795614, \"values\": [{ \"value\": \"{{ $json.body.screen_id }}\" }] },\n    { \"field_id\": 1795616, \"values\": [{ \"value\": \"{{ $json.body.tipo_dispositivo }}\" }] }\n  ]\n}]",
+          "options": {}
+        },
+        "id": "kommo-lead",
+        "name": "Crear lead en Kommo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          464,
+          304
+        ],
+        "notesInFlow": true,
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "F9TW6Fo6bqofPvXr",
+            "name": "Header Auth account 3"
+          }
+        },
+        "notes": "Credencial: Header Auth -> Authorization: Bearer TU_TOKEN_KOMMO (token de larga duracion)."
+      },
+      {
+        "parameters": {
+          "authentication": "serviceAccount",
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "Leads"
+          },
+          "columns": {
+            "mappingMode": "autoMapInputData",
+            "value": {},
+            "matchingColumns": [],
+            "schema": [],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "id": "sheets-log-2",
+        "name": "Log en Google Sheets",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4,
+        "position": [
+          704,
+          304
+        ],
+        "credentials": {
+          "googleApi": {
+            "id": "2awdtPjJDvJMLOsi",
+            "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $('Webhook Lead DOOH').item.json.body.email }}",
+                "operation": "isNotEmpty"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "if-email-2",
+        "name": "Tiene email?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          928,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Webhook Lead DOOH').item.json.body.email }}",
+          "subject": "Brief de pantallas LED y TOTEMs - Centauro Ads",
+          "message": "Hola {{ $('Webhook Lead DOOH').item.json.body.nombre }},<br><br>Gracias por tu interes en nuestras pantallas publicitarias DOOH.<br><br>Puedes descargar y ver la presentacion del brief interactivo aqui:<br><br><strong><a href=\"https://links.centauroads.com/oferta-dooh\">Ver Brief en Canva</a></strong><br><br>Tambien te atenderemos en breve por WhatsApp desde nuestra linea verificada para responder cualquier pregunta o cotizacion.<br><br>Atentamente,<br>El equipo de Centauro Ads",
+          "options": {}
+        },
+        "id": "gmail-brief-2",
+        "name": "Enviar brief por email",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          1152,
+          208
+        ],
+        "webhookId": "1e085181-488c-47b0-916c-1113c9800e8b",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "CWKUORKGFGMUeDCC",
+            "name": "N8N-email-eli"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook Lead DOOH": {
+        "main": [
+          [
+            {
+              "node": "Crear lead en Kommo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear lead en Kommo": {
+        "main": [
+          [
+            {
+              "node": "Log en Google Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Log en Google Sheets": {
+        "main": [
+          [
+            {
+              "node": "Tiene email?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Tiene email?": {
+        "main": [
+          [
+            {
+              "node": "Enviar brief por email",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      }
+    },
+    "authors": "Joao Nelo",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-06-11T11:06:51.216Z",
+        "id": 139,
+        "workflowId": "Ah22xO6SDLqXSSCT",
+        "versionId": "1363cdd9-ba10-4efc-aeab-23e44b15d6f3",
+        "event": "activated",
+        "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      }
+    ]
+  },
+  "scopes": [
+    "workflow:create",
+    "workflow:delete",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:update"
+  ],
+  "checksum": "ff03b35caadd880fec58aaf8a5fb22c7d57b952fc1c1c6a0058a3c51e94f60a1"
+}

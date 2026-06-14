@@ -1,0 +1,114 @@
+{
+  "name": "DOOH Captura Telefono - 1a Instancia (ref_code) [PROD]",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kommo-chat-inbound",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh-chat",
+      "name": "Webhook Chat Kommo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "notes": "Kommo > Ajustes > Webhooks > evento 'Mensaje entrante / Chat' apuntando a /webhook/kommo-chat-inbound. Kommo envia form-urlencoded con claves tipo message[add][0][text]."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Kommo envia el body como form-urlencoded: claves planas tipo message[add][0][text].\n// n8n lo deja en $json.body (objeto) o en $json directo. Soportamos ambos.\nconst body = ($json.body && typeof $json.body === 'object') ? $json.body : $json;\nconst get = (k) => body[k];\n\n// entity_id de un webhook de mensaje/talk apunta al lead vinculado a la conversacion.\nconst entityId =\n  get('talk[add][0][entity_id]') ||\n  get('message[add][0][entity_id]') ||\n  get('message[add][0][element_id]') ||\n  '';\n\n// contact_id por si Kommo lo incluye directo (atajo).\nconst contactIdDirecto =\n  get('message[add][0][contact_id]') ||\n  get('talk[add][0][contact_id]') ||\n  '';\n\n// Texto del mensaje entrante (donde viaja el codigo de referencia).\nconst text =\n  get('message[add][0][text]') ||\n  get('message[add][0][message]') ||\n  get('message[add][0][comment]') ||\n  '';\n\nconst m = String(text).match(/REF-[A-Za-z0-9]+/i);\nconst refCode = m ? m[0].toUpperCase() : '';\n\nreturn [{ json: { entityId: String(entityId), contactIdDirecto: String(contactIdDirecto), refCode, text: String(text) } }];"
+      },
+      "id": "code-parse",
+      "name": "Parsear webhook entrante",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{$env.KOMMO_SUBDOMAIN || 'centauroadss'}}.kommo.com/api/v4/leads/{{ $json.entityId }}?with=contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "http-lead",
+      "name": "GET Lead con contactos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "onError": "continueRegularOutput",
+      "notes": "leads/{id}?with=contacts devuelve _embedded.contacts pero SOLO id + is_main (sin custom_fields). El telefono se lee en el GET de contacto siguiente."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Determina el contact_id de quien escribio. Prioriza el contacto directo del webhook;\n// si no, el contacto principal (is_main) del lead.\nconst parse = $('Parsear webhook entrante').item.json;\nlet contactId = parse.contactIdDirecto || '';\n\nif (!contactId) {\n  const lead = $json || {};\n  const contactos = (lead._embedded && lead._embedded.contacts) || [];\n  contactos.sort((a, b) => (b.is_main === true) - (a.is_main === true));\n  contactId = contactos.length ? String(contactos[0].id) : '';\n}\n\nreturn [{ json: { contactId, refCode: parse.refCode } }];"
+      },
+      "id": "code-pick",
+      "name": "Elegir contacto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{$env.KOMMO_SUBDOMAIN || 'centauroadss'}}.kommo.com/api/v4/contacts/{{ $json.contactId || '0' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "http-contact",
+      "name": "GET Contacto (telefono)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrae y normaliza el telefono del contacto. Match a la sheet por ref_code.\nconst contact = $json || {};\nconst refCode = $('Elegir contacto').item.json.refCode || '';\nconst contactId = $('Elegir contacto').item.json.contactId || '';\n\nfunction normalizar(raw) {\n  if (raw === null || raw === undefined) return '';\n  let d = String(raw).replace(/[^\\d]/g, '');\n  if (d.length < 10) return '';\n  if (!d.startsWith('58') && d.length === 10) d = '58' + d; // VE -> E.164 sin '+'\n  return d;\n}\n\nlet telefono = '';\nconst campos = contact.custom_fields_values || [];\nfor (const f of campos) {\n  if (f.field_code === 'PHONE' || f.field_type === 'phone') {\n    for (const v of (f.values || [])) {\n      const t = normalizar(v.value);\n      if (t) { telefono = t; break; }\n    }\n  }\n  if (telefono) break;\n}\n\n// Si falta ref_code o telefono, no actualizamos: el barrido (2a instancia) lo recupera.\nif (!refCode || !telefono) {\n  console.log('Captura incompleta -> la tomara el barrido. refCode=' + refCode + ' telefono=' + telefono);\n  return [];\n}\n\nreturn [{ json: { ref_code: refCode, telefono, kommo_contact_id: String(contactId), estado: 'chat_iniciado' } }];"
+      },
+      "id": "code-extract",
+      "name": "Extraer y normalizar telefono",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": ["ref_code"],
+          "value": {
+            "ref_code": "={{ $json.ref_code }}",
+            "telefono": "={{ $json.telefono }}",
+            "kommo_contact_id": "={{ $json.kommo_contact_id }}",
+            "estado": "={{ $json.estado }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-upsert",
+      "name": "Upsert telefono por ref_code",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1520, 300],
+      "notes": "UPDATE (no append) emparejando por ref_code. Escribe solo la fila exacta del lead, sin importar numeros duplicados."
+    }
+  ],
+  "connections": {
+    "Webhook Chat Kommo": { "main": [[{ "node": "Parsear webhook entrante", "type": "main", "index": 0 }]] },
+    "Parsear webhook entrante": { "main": [[{ "node": "GET Lead con contactos", "type": "main", "index": 0 }]] },
+    "GET Lead con contactos": { "main": [[{ "node": "Elegir contacto", "type": "main", "index": 0 }]] },
+    "Elegir contacto": { "main": [[{ "node": "GET Contacto (telefono)", "type": "main", "index": 0 }]] },
+    "GET Contacto (telefono)": { "main": [[{ "node": "Extraer y normalizar telefono", "type": "main", "index": 0 }]] },
+    "Extraer y normalizar telefono": { "main": [[{ "node": "Upsert telefono por ref_code", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

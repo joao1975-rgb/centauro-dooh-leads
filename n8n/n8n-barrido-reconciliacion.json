@@ -1,0 +1,122 @@
+{
+  "name": "DOOH Barrido Telefono - 2a Instancia (reconciliacion) [PROD]",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] }
+      },
+      "id": "cron-15m",
+      "name": "Cada 15 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "options": {}
+      },
+      "id": "sheets-read",
+      "name": "Leer toda la hoja",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Selecciona leads que esperan chat y AUN no tienen telefono.\nconst items = $input.all();\nconst out = [];\nconst now = Date.now();\nconst MAX_MS = 48 * 60 * 60 * 1000; // 48h: tras esto se marca sin_whatsapp\n\nfor (const it of items) {\n  const r = it.json || {};\n  const tel = (r.telefono || '').toString().trim();\n  const estado = (r.estado || '').toString().trim();\n  const pendiente = !tel && (estado === 'esperando_chat' || estado === 'chat_iniciado');\n  if (!pendiente) continue;\n  if (!r.kommo_lead_id) continue;\n  const ts = Date.parse(r.timestamp);\n  const ageMs = isNaN(ts) ? 0 : (now - ts);\n  out.push({ json: {\n    kommo_lead_id: String(r.kommo_lead_id),\n    ref_code: r.ref_code || '',\n    expirado: ageMs > MAX_MS\n  }});\n}\nreturn out;"
+      },
+      "id": "code-filter",
+      "name": "Filtrar pendientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{$env.KOMMO_SUBDOMAIN || 'centauroadss'}}.kommo.com/api/v4/leads/{{ $json.kommo_lead_id }}?with=contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "http-lead-b",
+      "name": "GET Lead con contactos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Filtrar pendientes').item.json;\nconst lead = $json || {};\nconst contactos = (lead._embedded && lead._embedded.contacts) || [];\ncontactos.sort((a, b) => (b.is_main === true) - (a.is_main === true));\nconst contactId = contactos.length ? String(contactos[0].id) : '';\nreturn [{ json: { kommo_lead_id: base.kommo_lead_id, ref_code: base.ref_code, expirado: base.expirado, contactId } }];"
+      },
+      "id": "code-pick-b",
+      "name": "Elegir contacto barrido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{$env.KOMMO_SUBDOMAIN || 'centauroadss'}}.kommo.com/api/v4/contacts/{{ $json.contactId || '0' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "http-contact-b",
+      "name": "GET Contacto (telefono)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Elegir contacto barrido').item.json;\nconst contact = $json || {};\n\nfunction normalizar(raw) {\n  if (raw === null || raw === undefined) return '';\n  let d = String(raw).replace(/[^\\d]/g, '');\n  if (d.startsWith('0') && d.length === 11) {\n    d = d.slice(1);\n  }\n  if (d.length < 10) return '';\n  if (!d.startsWith('58') && d.length === 10) d = '58' + d;\n  return d;\n}\n\nlet telefono = '';\nconst campos = contact.custom_fields_values || [];\nfor (const f of campos) {\n  if (f.field_code === 'PHONE' || f.field_type === 'phone') {\n    for (const v of (f.values || [])) {\n      const t = normalizar(v.value);\n      if (t) { telefono = t; break; }\n    }\n  }\n  if (telefono) break;\n}\n\nif (telefono) {\n  return [{ json: { kommo_lead_id: base.kommo_lead_id, telefono, kommo_contact_id: base.contactId || '', estado: 'chat_iniciado' } }];\n}\n// Sin telefono y ya paso la ventana de 48h -> estado terminal para no reintentar por siempre.\nif (base.expirado) {\n  return [{ json: { kommo_lead_id: base.kommo_lead_id, telefono: '', kommo_contact_id: base.contactId || '', estado: 'sin_whatsapp' } }];\n}\n// Aun dentro de la ventana: seguir esperando, no escribir nada.\nreturn [];"
+      },
+      "id": "code-extract-b",
+      "name": "Resolver telefono o expirar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": ["kommo_lead_id"],
+          "value": {
+            "kommo_lead_id": "={{ $json.kommo_lead_id }}",
+            "telefono": "={{ $json.telefono }}",
+            "kommo_contact": "={{ $json.kommo_contact_id }}",
+            "estado": "={{ $json.estado }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-update-b",
+      "name": "Upsert por kommo_lead_id",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1740, 300]
+    }
+  ],
+  "connections": {
+    "Cada 15 minutos": { "main": [[{ "node": "Leer toda la hoja", "type": "main", "index": 0 }]] },
+    "Leer toda la hoja": { "main": [[{ "node": "Filtrar pendientes", "type": "main", "index": 0 }]] },
+    "Filtrar pendientes": { "main": [[{ "node": "GET Lead con contactos", "type": "main", "index": 0 }]] },
+    "GET Lead con contactos": { "main": [[{ "node": "Elegir contacto barrido", "type": "main", "index": 0 }]] },
+    "Elegir contacto barrido": { "main": [[{ "node": "GET Contacto (telefono)", "type": "main", "index": 0 }]] },
+    "GET Contacto (telefono)": { "main": [[{ "node": "Resolver telefono o expirar", "type": "main", "index": 0 }]] },
+    "Resolver telefono o expirar": { "main": [[{ "node": "Upsert por kommo_lead_id", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

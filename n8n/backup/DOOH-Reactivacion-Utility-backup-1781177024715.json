@@ -1,0 +1,592 @@
+{
+  "updatedAt": "2026-06-11T10:54:15.777Z",
+  "createdAt": "2026-06-11T03:03:43.056Z",
+  "id": "cp7zBd7W0LXBUgZR",
+  "name": "DOOH Reactivacion - Plantilla UTILITY con Control de Errores [PROD]",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "cron-24h",
+      "name": "Cada 24 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "estado",
+              "lookupValue": "chat_frio"
+            }
+          ]
+        },
+        "options": {},
+        "authentication": "serviceAccount"
+      },
+      "id": "sheets-frios",
+      "name": "Leer leads con chat frio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        420,
+        300
+      ],
+      "notes": "Lee contactos que iniciaron chat pero se enfriaron >24h.",
+      "credentials": {
+        "googleApi": {
+          "id": "I5mNahkqnVgb5IAK",
+          "name": "Google Sheets Service Account (DOOH Leads)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/{{$env.META_PHONE_NUMBER_ID || 'REEMPLAZA_PHONE_NUMBER_ID'}}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.whatsapp_verificado || $json.telefono }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"seguimiento_brief_dooh\",\n    \"language\": { \"code\": \"es\" },\n    \"components\": [{\n      \"type\": \"body\",\n      \"parameters\": [\n        { \"type\": \"text\", \"text\": \"{{ $json.nombre }}\" },\n        { \"type\": \"text\", \"text\": \"{{ $json.empresa }}\" }\n      ]\n    }]\n  }\n}",
+        "options": {}
+      },
+      "id": "wa-utility",
+      "name": "Enviar plantilla UTILITY",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Llama a la API de Meta. Si falla por error 131049, continúa el flujo para marcar reintento."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.error ? $json.error.code : 0 }}",
+              "operation": "equal",
+              "value2": 131049
+            }
+          ]
+        }
+      },
+      "id": "if-frequency-cap",
+      "name": "Tiene Frequency Cap?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "kommo_lead_id"
+          ],
+          "value": {
+            "kommo_lead_id": "={{ $('Leer leads con chat frio').item.json.kommo_lead_id }}",
+            "estado": "reintentar_manana"
+          }
+        },
+        "options": {},
+        "authentication": "serviceAccount"
+      },
+      "id": "sheets-reintentar",
+      "name": "Marcar Reintentar Mañana",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        200
+      ],
+      "notes": "Evita sobrecargar la API de Meta si se alcanzó el límite diario.",
+      "credentials": {
+        "googleApi": {
+          "id": "I5mNahkqnVgb5IAK",
+          "name": "Google Sheets Service Account (DOOH Leads)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "kommo_lead_id"
+          ],
+          "value": {
+            "kommo_lead_id": "={{ $('Leer leads con chat frio').item.json.kommo_lead_id }}",
+            "estado": "reactivado_utility"
+          }
+        },
+        "options": {},
+        "authentication": "serviceAccount"
+      },
+      "id": "sheets-update",
+      "name": "Marcar como reactivado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        400
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "I5mNahkqnVgb5IAK",
+          "name": "Google Sheets Service Account (DOOH Leads)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cada 24 horas": {
+      "main": [
+        [
+          {
+            "node": "Leer leads con chat frio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer leads con chat frio": {
+      "main": [
+        [
+          {
+            "node": "Enviar plantilla UTILITY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar plantilla UTILITY": {
+      "main": [
+        [
+          {
+            "node": "Tiene Frequency Cap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tiene Frequency Cap?": {
+      "main": [
+        [
+          {
+            "node": "Marcar Reintentar Mañana",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Marcar como reactivado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Cada 24 horas": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {},
+  "pinData": null,
+  "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+  "activeVersionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+  "versionCounter": 13,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-11T03:03:43.059Z",
+      "createdAt": "2026-06-11T03:03:43.059Z",
+      "role": "workflow:owner",
+      "workflowId": "cp7zBd7W0LXBUgZR",
+      "projectId": "bqxro2iGq6oj2lvY",
+      "project": {
+        "updatedAt": "2026-01-23T02:55:02.386Z",
+        "createdAt": "2026-01-23T02:54:01.180Z",
+        "id": "bqxro2iGq6oj2lvY",
+        "name": "Joao Nelo <centauroadss@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      }
+    }
+  ],
+  "tags": [],
+  "parentFolder": null,
+  "activeVersion": {
+    "updatedAt": "2026-06-11T10:46:08.965Z",
+    "createdAt": "2026-06-11T10:46:08.965Z",
+    "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+    "workflowId": "cp7zBd7W0LXBUgZR",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours",
+                "hoursInterval": 24
+              }
+            ]
+          }
+        },
+        "id": "cron-24h",
+        "name": "Cada 24 horas",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          200,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "read",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "Leads"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "estado",
+                "lookupValue": "chat_frio"
+              }
+            ]
+          },
+          "options": {},
+          "authentication": "serviceAccount"
+        },
+        "id": "sheets-frios",
+        "name": "Leer leads con chat frio",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4,
+        "position": [
+          420,
+          300
+        ],
+        "notes": "Lee contactos que iniciaron chat pero se enfriaron >24h.",
+        "credentials": {
+          "googleApi": {
+            "id": "I5mNahkqnVgb5IAK",
+            "name": "Google Sheets Service Account (DOOH Leads)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://graph.facebook.com/v21.0/{{$env.META_PHONE_NUMBER_ID || 'REEMPLAZA_PHONE_NUMBER_ID'}}/messages",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.whatsapp_verificado || $json.telefono }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"seguimiento_brief_dooh\",\n    \"language\": { \"code\": \"es\" },\n    \"components\": [{\n      \"type\": \"body\",\n      \"parameters\": [\n        { \"type\": \"text\", \"text\": \"{{ $json.nombre }}\" },\n        { \"type\": \"text\", \"text\": \"{{ $json.empresa }}\" }\n      ]\n    }]\n  }\n}",
+          "options": {}
+        },
+        "id": "wa-utility",
+        "name": "Enviar plantilla UTILITY",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          640,
+          300
+        ],
+        "onError": "continueRegularOutput",
+        "notes": "Llama a la API de Meta. Si falla por error 131049, continúa el flujo para marcar reintento."
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "number": [
+              {
+                "value1": "={{ $json.error ? $json.error.code : 0 }}",
+                "operation": "equal",
+                "value2": 131049
+              }
+            ]
+          }
+        },
+        "id": "if-frequency-cap",
+        "name": "Tiene Frequency Cap?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "Leads"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "matchingColumns": [
+              "kommo_lead_id"
+            ],
+            "value": {
+              "kommo_lead_id": "={{ $('Leer leads con chat frio').item.json.kommo_lead_id }}",
+              "estado": "reintentar_manana"
+            }
+          },
+          "options": {},
+          "authentication": "serviceAccount"
+        },
+        "id": "sheets-reintentar",
+        "name": "Marcar Reintentar Mañana",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4,
+        "position": [
+          1120,
+          200
+        ],
+        "notes": "Evita sobrecargar la API de Meta si se alcanzó el límite diario.",
+        "credentials": {
+          "googleApi": {
+            "id": "I5mNahkqnVgb5IAK",
+            "name": "Google Sheets Service Account (DOOH Leads)"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "documentId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "1GawthviMOy4eEHDKprosfoX2fCoudV4wZ4tS-T7ONGc"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "list",
+            "value": "Leads"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "matchingColumns": [
+              "kommo_lead_id"
+            ],
+            "value": {
+              "kommo_lead_id": "={{ $('Leer leads con chat frio').item.json.kommo_lead_id }}",
+              "estado": "reactivado_utility"
+            }
+          },
+          "options": {},
+          "authentication": "serviceAccount"
+        },
+        "id": "sheets-update",
+        "name": "Marcar como reactivado",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4,
+        "position": [
+          1120,
+          400
+        ],
+        "credentials": {
+          "googleApi": {
+            "id": "I5mNahkqnVgb5IAK",
+            "name": "Google Sheets Service Account (DOOH Leads)"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Cada 24 horas": {
+        "main": [
+          [
+            {
+              "node": "Leer leads con chat frio",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Leer leads con chat frio": {
+        "main": [
+          [
+            {
+              "node": "Enviar plantilla UTILITY",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enviar plantilla UTILITY": {
+        "main": [
+          [
+            {
+              "node": "Tiene Frequency Cap?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Tiene Frequency Cap?": {
+        "main": [
+          [
+            {
+              "node": "Marcar Reintentar Mañana",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Marcar como reactivado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Joao Nelo",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "workflowPublishHistory": [
+      {
+        "createdAt": "2026-06-11T10:46:09.283Z",
+        "id": 99,
+        "workflowId": "cp7zBd7W0LXBUgZR",
+        "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+        "event": "activated",
+        "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      },
+      {
+        "createdAt": "2026-06-11T10:54:16.078Z",
+        "id": 115,
+        "workflowId": "cp7zBd7W0LXBUgZR",
+        "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+        "event": "activated",
+        "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      },
+      {
+        "createdAt": "2026-06-11T10:57:06.703Z",
+        "id": 127,
+        "workflowId": "cp7zBd7W0LXBUgZR",
+        "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+        "event": "activated",
+        "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      },
+      {
+        "createdAt": "2026-06-11T10:54:15.334Z",
+        "id": 114,
+        "workflowId": "cp7zBd7W0LXBUgZR",
+        "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+        "event": "deactivated",
+        "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      },
+      {
+        "createdAt": "2026-06-11T10:57:06.165Z",
+        "id": 126,
+        "workflowId": "cp7zBd7W0LXBUgZR",
+        "versionId": "ae78a571-b64c-4b3c-bf28-3b268c2f24c2",
+        "event": "deactivated",
+        "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+      }
+    ]
+  },
+  "scopes": [
+    "workflow:create",
+    "workflow:delete",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:update"
+  ],
+  "checksum": "5ddd543ac4a5afcc9d0644d303831d0e98a30e6eb281709520deb6050e4cb166"
+}

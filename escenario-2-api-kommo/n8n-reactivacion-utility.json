@@ -1,0 +1,78 @@
+{
+  "name": "DOOH Reactivacion - Plantilla UTILITY (solo leads que YA iniciaron chat)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 24 }] }
+      },
+      "id": "cron-24h",
+      "name": "Cada 24 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": { "__rl": true, "mode": "list", "value": "REEMPLAZA_ID_DE_TU_GOOGLE_SHEET" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "filtersUI": {
+          "values": [{ "lookupColumn": "estado", "lookupValue": "chat_frio" }]
+        },
+        "options": {}
+      },
+      "id": "sheets-frios",
+      "name": "Leer leads con chat frio",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [440, 300],
+      "notes": "IMPORTANTE: 'chat_frio' = el lead INICIO un chat (numero verificado, opt-in real) y dejo de responder hace mas de 24h. NUNCA enviar plantillas a numeros tipeados que no iniciaron chat."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/REEMPLAZA_PHONE_NUMBER_ID/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.whatsapp_verificado }}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"seguimiento_brief_dooh\",\n    \"language\": { \"code\": \"es\" },\n    \"components\": [{\n      \"type\": \"body\",\n      \"parameters\": [\n        { \"type\": \"text\", \"text\": \"{{ $json.nombre }}\" },\n        { \"type\": \"text\", \"text\": \"{{ $json.empresa }}\" }\n      ]\n    }]\n  }\n}",
+        "options": {}
+      },
+      "id": "wa-utility",
+      "name": "Enviar plantilla UTILITY",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "notes": "Plantilla a someter en Meta (categoria UTILITY): 'Hola {{1}}, te escribimos por el brief de pantallas DOOH que solicitaste para {{2}}. Sigue disponible aqui: [LINK]. Responde este mensaje si quieres agendar una llamada.' Manejar error 131049 (frequency cap) y monitorear quality rating."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "list", "value": "REEMPLAZA_ID_DE_TU_GOOGLE_SHEET" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "Leads" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": ["kommo_lead_id"],
+          "value": {
+            "kommo_lead_id": "={{ $('Leer leads con chat frio').item.json.kommo_lead_id }}",
+            "estado": "reactivado_utility"
+          }
+        },
+        "options": {}
+      },
+      "id": "sheets-update",
+      "name": "Marcar como reactivado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Cada 24 horas": { "main": [[{ "node": "Leer leads con chat frio", "type": "main", "index": 0 }]] },
+    "Leer leads con chat frio": { "main": [[{ "node": "Enviar plantilla UTILITY", "type": "main", "index": 0 }]] },
+    "Enviar plantilla UTILITY": { "main": [[{ "node": "Marcar como reactivado", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

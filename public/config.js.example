@@ -1,0 +1,11 @@
+// Copia este archivo a 'config.js' en la misma carpeta 'public' y edita los valores.
+// El archivo 'config.js' está ignorado en Git para que no subas tus credenciales públicas.
+
+window.APP_CONFIG = {
+  // URL del Webhook de producción o pruebas generado por n8n (flujo-leads)
+  N8N_WEBHOOK_URL: "https://TU-N8N.tudominio.com/webhook/lead-dooh-api",
+  
+  // Número de WhatsApp API de Meta registrado para responder (+58 422-1003559)
+  // Escribir solo números sin espacios ni símbolos (+584221003559 -> "584221003559")
+  WHATSAPP_NUMBER: "584221003559"
+};

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recibe el Brief de Pantallas | Centauro Ads</title>
+<style>
+  :root {
+    --brand-orange: #ea580c;
+    --brand-orange-hover: #c2410c;
+    --whatsapp-green: #22c55e;
+    --whatsapp-green-hover: #16a34a;
+    --dark-bg: #0b0f19;
+    --dark-card: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #cbd5e1;
+    --focus-ring: rgba(234, 88, 12, 0.15);
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  body {
+    background: radial-gradient(circle at top, #1e1b4b 0%, var(--dark-bg) 100%);
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  
+  .logo-container {
+    margin-bottom: 24px;
+    text-align: center;
+    animation: fadeIn 0.8s ease-out;
+  }
+  
+  .logo-text {
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+  
+  .logo-sub {
+    font-size: 0.75rem;
+    color: var(--brand-orange);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .card {
+    background: var(--dark-card);
+    color: var(--text-primary);
+    border-radius: 24px;
+    padding: 36px 28px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 8px;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+  }
+  
+  p.sub {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    margin-bottom: 24px;
+  }
+  
+  .form-group {
+    margin-bottom: 18px;
+    position: relative;
+  }
+  
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  input[type="text"], input[type="email"], select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    background-color: #f8fafc;
+    transition: all 0.25s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    background-size: 14px;
+    padding-right: 40px;
+  }
+  
+  input[type="text"]:focus, input[type="email"]:focus, select:focus {
+    outline: none;
+    border-color: var(--brand-orange);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px var(--focus-ring);
+  }
+  
+  .consent-container {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 20px 0;
+  }
+  
+  .consent-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    accent-color: var(--brand-orange);
+    flex-shrink: 0;
+  }
+  
+  .consent-label {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    text-transform: none;
+  }
+  
+  .consent-label a {
+    color: var(--brand-orange);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  .consent-label a:hover {
+    text-decoration: underline;
+  }
+  
+  button {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 14px;
+    background-color: var(--whatsapp-green);
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+    transition: all 0.25s ease;
+  }
+  
+  button:hover:not(:disabled) {
+    background-color: var(--whatsapp-green-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.3);
+  }
+
+  button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #94a3b8;
+    box-shadow: none;
+  }
+  
+  .hint {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 14px;
+    font-weight: 500;
+  }
+
+  .verification-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #2563eb;
+    background-color: #eff6ff;
+    padding: 4px 8px;
+    border-radius: 100px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .verification-badge svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+  
+  /* Spinner Animation */
+  .spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #ffffff;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Success and Redirect State styling */
+  .success-state {
+    display: none;
+    text-align: center;
+    padding: 24px 12px 12px;
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  .success-state h2 {
+    color: var(--whatsapp-green);
+    margin-bottom: 12px;
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+  
+  .success-state p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+  
+  .close-btn {
+    background-color: var(--text-primary);
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+  }
+
+  .close-btn:hover {
+    background-color: #334155;
+    transform: translateY(-1px);
+  }
+</style>
+</head>
+<body>
+
+<div class="logo-container">
+  <div class="logo-text">Centauro Ads</div>
+  <div class="logo-sub">DOOH Network</div>
+</div>
+
+<div class="card">
+  <div class="verification-badge">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+    </svg>
+    Contacto verificado por Meta
+  </div>
+
+  <h1>Recibe el Brief Comercial</h1>
+  <p class="sub">Completa los datos para habilitar el enlace y recibir el brief interactivo de nuestras pantallas directamente en tu WhatsApp.</p>
+  
+  <form id="leadForm">
+    <div class="form-group">
+      <label for="nombre">Tu nombre completo</label>
+      <input type="text" id="nombre" name="nombre" required autocomplete="name" placeholder="Ej: María Pérez">
+    </div>
+    
+    <div class="form-group">
+      <label for="empresa">Empresa o Negocio</label>
+      <input type="text" id="empresa" name="empresa" required autocomplete="organization" placeholder="Ej: Inversiones MP, C.A.">
+    </div>
+    
+    <div class="form-group">
+      <label for="email">Email institucional</label>
+      <input type="email" id="email" name="email" required autocomplete="email" placeholder="Ej: contacto@tuempresa.com">
+    </div>
+
+    <!-- Detección automática del dispositivo según el QR (campo oculto) -->
+    <input type="hidden" id="tipo_dispositivo" name="tipo_dispositivo" value="Pantalla">
+    
+    <div class="consent-container">
+      <input type="checkbox" id="consent">
+      <label for="consent" class="consent-label">
+        Acepto que Centauro Ads me envíe información comercial y autorizo el tratamiento de mis datos de acuerdo con el <a href="privacidad.html" target="_blank">Aviso de Privacidad</a>.
+      </label>
+    </div>
+    
+    <button type="submit" id="btn">
+      <span class="spinner" id="spinner"></span>
+      <span id="btnText">Continuar por WhatsApp</span>
+    </button>
+    
+    <div class="hint">Se abrirá WhatsApp con el mensaje prellenado en tu pantalla.</div>
+  </form>
+</div>
+
+<!-- Carga del archivo de configuración local/producción ignorado por Git -->
+<script src="config.js"></script>
+<script>
+  // Inicialización de variables con fallback si falla config.js
+  const N8N_WEBHOOK = window.APP_CONFIG?.N8N_WEBHOOK_URL || "http://localhost:5678/webhook-test/lead-dooh-api";
+  const WHATSAPP = window.APP_CONFIG?.WHATSAPP_NUMBER || "584221003559";
+
+  // Captura el parámetro de pantalla del QR (?screen=TOTEM_CCS_01)
+  const urlParams = new URLSearchParams(window.location.search);
+  const screenId = urlParams.get("screen") || "desconocida";
+
+  // Auto-detección del tipo de dispositivo
+  let tipoDispositivoDefinido = "Pantalla"; // valor por defecto
+  const screenIdLower = screenId.toLowerCase();
+  
+  // Si en la URL viene un parámetro explícito 'type' o 'device_type'
+  const typeUrlParam = urlParams.get("type") || urlParams.get("device_type");
+  if (typeUrlParam) {
+    const typeUrlParamLower = typeUrlParam.toLowerCase();
+    if (typeUrlParamLower.includes("totem")) {
+      tipoDispositivoDefinido = "Totem";
+    } else if (typeUrlParamLower.includes("pantalla") || typeUrlParamLower.includes("led")) {
+      tipoDispositivoDefinido = "Pantalla";
+    }
+  } else {
+    // Si no, lo inferimos a partir del screen_id
+    if (screenIdLower.includes("totem")) {
+      tipoDispositivoDefinido = "Totem";
+    } else if (screenIdLower.includes("pantalla") || screenIdLower.includes("led") || screenIdLower.includes("outdoor")) {
+      tipoDispositivoDefinido = "Pantalla";
+    }
+  }
+  
+  // Asignar el valor al campo oculto
+  document.getElementById("tipo_dispositivo").value = tipoDispositivoDefinido;
+
+  document.getElementById("leadForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById("btn");
+    const btnText = document.getElementById("btnText");
+    const spinner = document.getElementById("spinner");
+    
+    // UI Loading State
+    btn.disabled = true;
+    btnText.textContent = "Abriendo WhatsApp...";
+    spinner.style.display = "inline-block";
+
+    const data = {
+      nombre: document.getElementById("nombre").value.trim(),
+      empresa: document.getElementById("empresa").value.trim(),
+      email: document.getElementById("email").value.trim(),
+      tipo_dispositivo: document.getElementById("tipo_dispositivo").value,
+      screen_id: screenId,
+      consentimiento: document.getElementById("consent").checked,
+      timestamp: new Date().toISOString(),
+      user_agent: navigator.userAgent,
+      // Código de referencia único: vincula este registro con el chat de WhatsApp.
+      ref_code: "REF-" + Date.now().toString(36).toUpperCase()
+              + Math.random().toString(36).slice(2, 7).toUpperCase()
+    };
+
+    // Envío del Payload asíncrono a n8n sin retrasar la redirección.
+    // Usamos URLSearchParams (application/x-www-form-urlencoded) para evitar bloqueos por CORS preflight (OPTIONS)
+    // y garantizar que n8n parsee automáticamente el cuerpo de la petición.
+    const params = new URLSearchParams();
+    params.append("nombre", data.nombre);
+    params.append("empresa", data.empresa);
+    params.append("email", data.email);
+    params.append("tipo_dispositivo", data.tipo_dispositivo);
+    params.append("screen_id", data.screen_id);
+    params.append("consentimiento", data.consentimiento);
+    params.append("timestamp", data.timestamp);
+    params.append("user_agent", data.user_agent);
+    params.append("ref_code", data.ref_code);
+
+    try {
+      navigator.sendBeacon(N8N_WEBHOOK, params);
+    } catch (_) {
+      // Fallback robusto con fetch persistente (keepalive)
+      fetch(N8N_WEBHOOK, {
+        method: "POST",
+        body: params,
+        keepalive: true,
+        mode: "no-cors"
+      }).catch(() => {});
+    }
+
+    // Ocultar formulario y mostrar pantalla de éxito limpia
+    document.getElementById("leadForm").style.display = "none";
+    
+    // Cambiar el título e info de la tarjeta
+    document.querySelector("h1").style.display = "none";
+    document.querySelector("p.sub").style.display = "none";
+    
+    const successDiv = document.createElement("div");
+    successDiv.className = "success-state";
+    successDiv.style.display = "block";
+    successDiv.innerHTML = `
+      <h2>¡Redireccionando a WhatsApp!</h2>
+      <p>Hemos procesado tu solicitud comercial.<br>Por favor, envía el mensaje prellenado en el chat que se abrirá automáticamente en tu WhatsApp.</p>
+      <button class="close-btn" onclick="window.close()">Cerrar pestaña</button>
+    `;
+    document.querySelector(".card").appendChild(successDiv);
+
+    // Nombre amigable para el mensaje de WhatsApp con información completa de la empresa y correo
+    const friendlyDevice = data.tipo_dispositivo === "Totem" ? "Mobiliario Inteligente (TOTEM)" : "Pantalla LED Outdoor";
+    const msg = `Hola Centauro Ads, soy ${data.nombre} de la empresa ${data.empresa}, correo: ${data.email}. Vi su ${friendlyDevice} (${screenId}) y quiero recibir el brief de pantallas LED y TOTEMs. Mi código de registro es: ${data.ref_code}`;
+    
+    const whatsappUrl = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
+    
+    // Pequeño timeout para permitir que el canal de red envíe la baliza (beacon)
+    setTimeout(() => {
+      window.location.href = whatsappUrl;
+      
+      // Intentar cerrar la pestaña automáticamente después de redireccionar
+      setTimeout(() => {
+        window.close();
+      }, 1000);
+    }, 300);
+  });
+</script>
+</body>
+</html>
