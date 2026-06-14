@@ -402,6 +402,17 @@
           }
         ]
       ]
+    },
+    "Determinar Estado Email": {
+      "main": [
+        [
+          {
+            "node": "Log Email Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
