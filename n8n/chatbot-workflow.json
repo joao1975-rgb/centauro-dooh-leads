@@ -1,0 +1,1222 @@
+{
+  "data": {
+    "updatedAt": "2026-06-14T02:42:00.741Z",
+    "createdAt": "2026-03-08T06:12:15.806Z",
+    "id": "U02Z6lSLDwTr6Ber",
+    "name": "Chatbot Centauro (Bypass Evolution API)",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "kommo-chatbot-webhook",
+          "options": {}
+        },
+        "id": "f54ecbad-99cb-4954-9b00-dd54549a9330",
+        "name": "Webhook Entrante",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          0
+        ],
+        "webhookId": "kommo-chatbot-webhook"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.body[\"message[add][0][type]\"] }}",
+                "value2": "incoming"
+              }
+            ]
+          }
+        },
+        "id": "fc3c7bc0-0042-41b5-9a5c-8a968b1d94f2",
+        "name": "¿Es mensaje incoming?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          224,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "values": {
+            "string": [
+              {
+                "name": "respuesta_ia",
+                "value": "¡Hola! Soy el asistente virtual de Centauro ADS. Hemos recibido tu mensaje:\n\n\"{{ $json.body[\"message[add][0][text]\"] }}\"\n\nUn asesor humano te atenderá muy pronto."
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "981f6273-60c6-433c-9978-00ea6af6c047",
+        "name": "Generar Respuesta Inteligente",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 1,
+        "position": [
+          448,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ 'https://centauroadss.kommo.com/api/v4/contacts/' + $json.body[\"message[add][0][contact_id]\"] }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "kommoOAuth2Api",
+          "options": {}
+        },
+        "id": "28e48ff6-4d6e-4107-898d-89aac9a5dca0",
+        "name": "Obtener Telefono desde Kommo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          672,
+          0
+        ],
+        "credentials": {
+          "kommoOAuth2Api": {
+            "id": "qOUudAeGZLTSByTX",
+            "name": "Kommo account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v21.0/{{$env.META_PHONE_NUMBER_ID || 'REEMPLAZA_PHONE_NUMBER_ID'}}/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.META_ACCESS_TOKEN}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $('Buscar Lead en Sheets').item.json.telefono }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"{{ $('Buscar Lead en Sheets').item.json.email_estado === 'error' ? 'Hola ' + ($('Buscar Lead en Sheets').item.json.nombre || 'allí') + ', notamos que hubo un problema al enviar el material de valor a tu correo ' + ($('Buscar Lead en Sheets').item.json.email || '') + '. ¡No te preocupes! Aquí tienes el enlace directo de Canva para que lo veas y descargues: https://links.centauroads.com/lead-magnet' : '¡Hola! Gracias por tu interés. Aquí tienes el brief de pantallas LED y TOTEMs de Centauro Ads:\\n\\nhttps://links.centauroads.com/lead-magnet\\n\\nUn asesor se pondrá en contacto contigo a la brevedad para guiarte en tu campaña. ¡Éxito!' }}\"\n  }\n}",
+          "options": {}
+        },
+        "id": "e3abf4af-96f4-4188-bfa3-816148ea1b7c",
+        "name": "Enviar WhatsApp por Meta",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          880,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "language": "javaScript",
+          "jsCode": "\nconst n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
+        },
+        "id": "chatbot-jwt",
+        "name": "Generar JWT Sheets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          900,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://oauth2.googleapis.com/token",
+          "sendBody": true,
+          "specifyBody": "string",
+          "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ]
+          }
+        },
+        "id": "chatbot-oauth",
+        "name": "Intercambiar Token Sheets",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1060,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:M",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $json.access_token }}"
+              }
+            ]
+          }
+        },
+        "id": "chatbot-read-sheets",
+        "name": "Leer Leads en Chatbot",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1220,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "language": "javaScript",
+          "jsCode": "const rows = $json.values;\n// Obtener el Lead ID de Kommo del webhook entrante\nconst webhookBody = $('Webhook Entrante').first().json.body;\nconst leadIdToFind = webhookBody[\"message[add][0][entity_id]\"] || webhookBody[\"talk[add][0][entity_id]\"] || \"\";\n\nlet contact = null;\ntry {\n  const rawData = $('Obtener Telefono desde Kommo').item.json.data;\n  contact = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;\n} catch (e) {}\n\n// Obtener datos del contacto (si existen en Kommo CRM)\nconst emailField = contact?.custom_fields_values?.find(f => f.field_code === 'EMAIL');\nconst emailFromContact = (emailField?.values?.[0]?.value || \"\").trim().toLowerCase();\n\nconst phoneField = contact?.custom_fields_values?.find(f => f.field_code === 'PHONE');\nconst phoneToFind = (phoneField?.values?.[0]?.value || \"\").replace(/\\\\D/g, \"\");\n\n// Parsear el texto del mensaje entrante\nconst incomingText = webhookBody[\"message[add][0][text]\"] || \"\";\n\n// 1. Extraer Email del texto del mensaje\nconst emailMatches = incomingText.match(/[\\\\w.-]+@[\\\\w.-]+\\\\.[a-zA-Z]+/);\nconst emailFromText = emailMatches ? emailMatches[0].trim().toLowerCase() : \"\";\n\n// Unificar Email buscado\nconst emailToFind = emailFromContact || emailFromText;\n\n// 2. Extraer Nombre y Empresa del texto del mensaje\nlet nombreFromText = \"\";\nlet empresaFromText = \"\";\nconst textMatch = incomingText.match(/soy\\\\s+(.*?)\\\\s+de\\\\s+la\\\\s+empresa\\\\s+(.*?)(?:,|\\\\.)/i);\nif (textMatch) {\n  nombreFromText = textMatch[1].trim().toLowerCase();\n  empresaFromText = textMatch[2].trim().toLowerCase();\n}\n\nif (!rows || rows.length <= 1) {\n  return [{\n    json: {\n      found: false,\n      rowNumber: null,\n      leadId: leadIdToFind,\n      matchType: 'no_rows',\n      telefono: phoneToFind,\n      contactId: \"\",\n      email_estado: \"\",\n      email: emailToFind,\n      nombre: \"\"\n    }\n  }];\n}\n\nconst headers = rows[0];\nconst leadIdIndex = headers.indexOf('kommo_lead_id');\nconst emailIndex = headers.indexOf('email');\nconst phoneIndex = headers.indexOf('telefono');\nconst nombreIndex = headers.indexOf('nombre');\nconst empresaIndex = headers.indexOf('empresa');\nconst estadoIndex = headers.indexOf('estado');\nconst contactIdIndex = headers.indexOf('kommo_contact_id');\nconst emailEstadoIndex = headers.indexOf('email_estado');\n\n// Helper function to return unified format\nfunction makeMatchResult(found, rowNum, type, row) {\n  return [{\n    json: {\n      found,\n      rowNumber: rowNum,\n      leadId: row ? row[leadIdIndex] || leadIdToFind : leadIdToFind,\n      matchType: type,\n      telefono: phoneToFind,\n      contactId: row && contactIdIndex !== -1 ? row[contactIdIndex] || \"\" : \"\",\n      email_estado: row && emailEstadoIndex !== -1 ? row[emailEstadoIndex] || \"\" : \"\",\n      email: row && emailIndex !== -1 ? row[emailIndex] || \"\" : emailToFind,\n      nombre: row && nombreIndex !== -1 ? row[nombreIndex] || \"\" : \"\"\n    }\n  }];\n}\n\n// --- ESTRATEGIA 1: Buscar por Email (de abajo hacia arriba, más reciente primero) ---\nif (emailToFind && emailIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowEmail = (row[emailIndex] || \"\").trim().toLowerCase();\n    if (rowEmail === emailToFind) {\n      return makeMatchResult(true, i + 1, 'email', row);\n    }\n  }\n}\n\n// --- ESTRATEGIA 2: Buscar por Nombre y Empresa (de abajo hacia arriba, más reciente primero) ---\nif (nombreFromText && empresaFromText && nombreIndex !== -1 && empresaIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowNombre = (row[nombreIndex] || \"\").trim().toLowerCase();\n    const rowEmpresa = (row[empresaIndex] || \"\").trim().toLowerCase();\n    \n    if (\n      (rowNombre.includes(nombreFromText) || nombreFromText.includes(rowNombre)) &&\n      (rowEmpresa.includes(empresaFromText) || empresaFromText.includes(rowEmpresa))\n    ) {\n      return makeMatchResult(true, i + 1, 'nombre_empresa', row);\n    }\n  }\n}\n\n// --- ESTRATEGIA 3: Buscar por Kommo Lead ID (de abajo hacia arriba, más reciente primero) ---\nif (leadIdToFind && leadIdIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    if (row[leadIdIndex] === String(leadIdToFind)) {\n      return makeMatchResult(true, i + 1, 'lead_id', row);\n    }\n  }\n}\n\n// --- ESTRATEGIA 4: Buscar por Teléfono (normalizado, de abajo hacia arriba, más reciente primero) ---\nif (phoneToFind && phoneIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowPhone = (row[phoneIndex] || \"\").replace(/\\\\D/g, \"\");\n    if (rowPhone && (rowPhone === phoneToFind || phoneToFind.endsWith(rowPhone) || rowPhone.endsWith(phoneToFind))) {\n      return makeMatchResult(true, i + 1, 'phone', row);\n    }\n  }\n}\n\n// --- ESTRATEGIA 5: Fallback al último lead en \"esperando_chat\" (de abajo hacia arriba) ---\nif (estadoIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowEstado = (row[estadoIndex] || \"\").trim().toLowerCase();\n    const rowPhone = (row[phoneIndex] || \"\").trim();\n    if (rowEstado === 'esperando_chat' && !rowPhone) {\n      return makeMatchResult(true, i + 1, 'fallback_esperando_chat', row);\n    }\n  }\n}\n\n// Fallback when not found\nreturn [{\n  json: {\n    found: false,\n    rowNumber: null,\n    leadId: leadIdToFind,\n    matchType: 'none',\n    telefono: phoneToFind,\n    contactId: \"\",\n    email_estado: \"\",\n    email: emailToFind,\n    nombre: \"\"\n  }\n}];"
+        },
+        "id": "chatbot-search-lead",
+        "name": "Buscar Lead en Sheets",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1380,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{ $json.found }}",
+                "value2": true
+              }
+            ]
+          }
+        },
+        "id": "chatbot-if-found",
+        "name": "Lead Encontrado en Sheets?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          1540,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PUT",
+          "url": "=https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!H{{ $json.rowNumber }}:I{{ $json.rowNumber }}?valueInputOption=USER_ENTERED",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $('Intercambiar Token Sheets').item.json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"values\": [[\n    \"chat_iniciado\",\n    \"{{ $json.telefono }}\"\n  ]]\n}"
+        },
+        "id": "chatbot-update-sheets",
+        "name": "Actualizar Sheets Chatbot",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1740,
+          150
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://centauroadss.kommo.com/api/v4/leads/{{ $('Lead Encontrado en Sheets?').item.json.leadId }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "kommoOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"status_id\": 107458283\n}",
+          "options": {}
+        },
+        "id": "chatbot-update-kommo",
+        "name": "Actualizar Lead en Kommo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2740,
+          150
+        ],
+        "credentials": {
+          "kommoOAuth2Api": {
+            "id": "qOUudAeGZLTSByTX",
+            "name": "Kommo account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://centauroadss.kommo.com/api/v4/leads/{{ $('Buscar Lead en Sheets').item.json.leadId }}/link",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "kommoOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "=[\n  {\n    \"to_entity_id\": {{ Number($('Webhook Entrante').first().json.body[\"message[add][0][contact_id]\"] || $('Webhook Entrante').first().json.body[\"talk[add][0][contact_id]\"]) }},\n    \"to_entity_type\": \"contacts\"\n  }\n]",
+          "options": {}
+        },
+        "id": "chatbot-link-original",
+        "name": "Vincular Chat a Lead Original",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1940,
+          150
+        ],
+        "credentials": {
+          "kommoOAuth2Api": {
+            "id": "qOUudAeGZLTSByTX",
+            "name": "Kommo account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $('Buscar Lead en Sheets').item.json.contactId }}",
+                "operation": "isNotEmpty"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "chatbot-has-contact-id",
+        "name": "Tiene Contact ID?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2140,
+          150
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://centauroadss.kommo.com/api/v4/contacts/{{ $('Buscar Lead en Sheets').item.json.contactId }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "kommoOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"custom_fields_values\": [\n    {\n      \"field_code\": \"PHONE\",\n      \"values\": [{ \"value\": \"{{ $('Buscar Lead en Sheets').item.json.telefono }}\", \"enum_code\": \"WORK\" }]\n    }\n  ]\n}",
+          "options": {}
+        },
+        "id": "chatbot-update-contact",
+        "name": "Actualizar Contacto Original",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2340,
+          50
+        ],
+        "credentials": {
+          "kommoOAuth2Api": {
+            "id": "qOUudAeGZLTSByTX",
+            "name": "Kommo account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "=https://centauroadss.kommo.com/api/v4/leads/{{ $('Webhook Entrante').first().json.body[\"message[add][0][entity_id]\"] || $('Webhook Entrante').first().json.body[\"talk[add][0][entity_id]\"] }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "kommoOAuth2Api",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"status_id\": 143\n}",
+          "options": {}
+        },
+        "id": "chatbot-archive-duplicate",
+        "name": "Archivar Lead de Chat Duplicado",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2540,
+          150
+        ],
+        "credentials": {
+          "kommoOAuth2Api": {
+            "id": "qOUudAeGZLTSByTX",
+            "name": "Kommo account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook Entrante": {
+        "main": [
+          [
+            {
+              "node": "¿Es mensaje incoming?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Es mensaje incoming?": {
+        "main": [
+          [
+            {
+              "node": "Generar Respuesta Inteligente",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generar Respuesta Inteligente": {
+        "main": [
+          [
+            {
+              "node": "Obtener Telefono desde Kommo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Obtener Telefono desde Kommo": {
+        "main": [
+          [
+            {
+              "node": "Generar JWT Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generar JWT Sheets": {
+        "main": [
+          [
+            {
+              "node": "Intercambiar Token Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Intercambiar Token Sheets": {
+        "main": [
+          [
+            {
+              "node": "Leer Leads en Chatbot",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Leer Leads en Chatbot": {
+        "main": [
+          [
+            {
+              "node": "Buscar Lead en Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Buscar Lead en Sheets": {
+        "main": [
+          [
+            {
+              "node": "Lead Encontrado en Sheets?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Enviar WhatsApp por Meta",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Lead Encontrado en Sheets?": {
+        "main": [
+          [
+            {
+              "node": "Actualizar Sheets Chatbot",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "Actualizar Sheets Chatbot": {
+        "main": [
+          [
+            {
+              "node": "Vincular Chat a Lead Original",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Vincular Chat a Lead Original": {
+        "main": [
+          [
+            {
+              "node": "Tiene Contact ID?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Tiene Contact ID?": {
+        "main": [
+          [
+            {
+              "node": "Actualizar Contacto Original",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Archivar Lead de Chat Duplicado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Actualizar Contacto Original": {
+        "main": [
+          [
+            {
+              "node": "Archivar Lead de Chat Duplicado",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Archivar Lead de Chat Duplicado": {
+        "main": [
+          [
+            {
+              "node": "Actualizar Lead en Kommo",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate",
+      "availableInMCP": false,
+      "timeSavedMode": "fixed",
+      "callerPolicy": "workflowsFromSameOwner"
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+    "activeVersionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+    "versionCounter": 119,
+    "triggerCount": 1,
+    "shared": [
+      {
+        "updatedAt": "2026-03-08T06:12:15.808Z",
+        "createdAt": "2026-03-08T06:12:15.808Z",
+        "role": "workflow:owner",
+        "workflowId": "U02Z6lSLDwTr6Ber",
+        "projectId": "bqxro2iGq6oj2lvY",
+        "project": {
+          "updatedAt": "2026-01-23T02:55:02.386Z",
+          "createdAt": "2026-01-23T02:54:01.180Z",
+          "id": "bqxro2iGq6oj2lvY",
+          "name": "Joao Nelo <centauroadss@gmail.com>",
+          "type": "personal",
+          "icon": null,
+          "description": null,
+          "creatorId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        }
+      }
+    ],
+    "tags": [],
+    "parentFolder": null,
+    "activeVersion": {
+      "updatedAt": "2026-06-13T21:20:02.812Z",
+      "createdAt": "2026-06-13T21:20:02.812Z",
+      "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+      "workflowId": "U02Z6lSLDwTr6Ber",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "kommo-chatbot-webhook",
+            "options": {}
+          },
+          "id": "f54ecbad-99cb-4954-9b00-dd54549a9330",
+          "name": "Webhook Entrante",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 1,
+          "position": [
+            0,
+            0
+          ],
+          "webhookId": "kommo-chatbot-webhook"
+        },
+        {
+          "parameters": {
+            "conditions": {
+              "string": [
+                {
+                  "value1": "={{ $json.body[\"message[add][0][type]\"] }}",
+                  "value2": "incoming"
+                }
+              ]
+            }
+          },
+          "id": "fc3c7bc0-0042-41b5-9a5c-8a968b1d94f2",
+          "name": "¿Es mensaje incoming?",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 1,
+          "position": [
+            224,
+            0
+          ]
+        },
+        {
+          "parameters": {
+            "values": {
+              "string": [
+                {
+                  "name": "respuesta_ia",
+                  "value": "¡Hola! Soy el asistente virtual de Centauro ADS. Hemos recibido tu mensaje:\n\n\"{{ $json.body[\"message[add][0][text]\"] }}\"\n\nUn asesor humano te atenderá muy pronto."
+                }
+              ]
+            },
+            "options": {}
+          },
+          "id": "981f6273-60c6-433c-9978-00ea6af6c047",
+          "name": "Generar Respuesta Inteligente",
+          "type": "n8n-nodes-base.set",
+          "typeVersion": 1,
+          "position": [
+            448,
+            0
+          ]
+        },
+        {
+          "parameters": {
+            "url": "={{ 'https://centauroadss.kommo.com/api/v4/contacts/' + $json.body[\"message[add][0][contact_id]\"] }}",
+            "authentication": "predefinedCredentialType",
+            "nodeCredentialType": "kommoOAuth2Api",
+            "options": {}
+          },
+          "id": "28e48ff6-4d6e-4107-898d-89aac9a5dca0",
+          "name": "Obtener Telefono desde Kommo",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4,
+          "position": [
+            672,
+            0
+          ],
+          "credentials": {
+            "kommoOAuth2Api": {
+              "id": "qOUudAeGZLTSByTX",
+              "name": "Kommo account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "=https://graph.facebook.com/v21.0/{{$env.META_PHONE_NUMBER_ID || 'REEMPLAZA_PHONE_NUMBER_ID'}}/messages",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{$env.META_ACCESS_TOKEN}}"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ JSON.parse($json.data).custom_fields_values.find(f => f.field_code === 'PHONE').values[0].value.replace(/\\\\D/g, '') }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"preview_url\": false,\n    \"body\": \"¡Hola! Gracias por tu interés. Aquí tienes el brief de pantallas LED y TOTEMs de Centauro Ads:\\n\\nhttps://links.centauroads.com/oferta-dooh\\n\\nUn asesor comercial se pondrá en contacto contigo en breve para resolver cualquier duda.\"\n  }\n}",
+            "options": {}
+          },
+          "id": "e3abf4af-96f4-4188-bfa3-816148ea1b7c",
+          "name": "Enviar WhatsApp por Meta",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            880,
+            0
+          ]
+        },
+        {
+          "parameters": {
+            "mode": "runOnceForAllItems",
+            "language": "javaScript",
+            "jsCode": "\nconst n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];\n"
+          },
+          "id": "chatbot-jwt",
+          "name": "Generar JWT Sheets",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            900,
+            200
+          ]
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "https://oauth2.googleapis.com/token",
+            "sendBody": true,
+            "specifyBody": "string",
+            "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/x-www-form-urlencoded"
+                }
+              ]
+            }
+          },
+          "id": "chatbot-oauth",
+          "name": "Intercambiar Token Sheets",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            1060,
+            200
+          ]
+        },
+        {
+          "parameters": {
+            "method": "GET",
+            "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:J",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $json.access_token }}"
+                }
+              ]
+            }
+          },
+          "id": "chatbot-read-sheets",
+          "name": "Leer Leads en Chatbot",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            1220,
+            200
+          ]
+        },
+        {
+          "parameters": {
+            "language": "javaScript",
+            "jsCode": "\nconst rows = $json.values;\n// Obtener el Lead ID de Kommo del webhook entrante\nconst webhookBody = $('Webhook Entrante').first().json.body;\nconst leadIdToFind = webhookBody[\"message[add][0][entity_id]\"] || webhookBody[\"talk[add][0][entity_id]\"] || \"\";\n\nlet contact = null;\ntry {\n  const rawData = $('Obtener Telefono desde Kommo').item.json.data;\n  contact = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;\n} catch (e) {}\n\n// Obtener datos del contacto (si existen en Kommo CRM)\nconst emailField = contact?.custom_fields_values?.find(f => f.field_code === 'EMAIL');\nconst emailFromContact = (emailField?.values?.[0]?.value || \"\").trim().toLowerCase();\n\nconst phoneField = contact?.custom_fields_values?.find(f => f.field_code === 'PHONE');\nconst phoneToFind = (phoneField?.values?.[0]?.value || \"\").replace(/\\D/g, \"\");\n\n// Parsear el texto del mensaje entrante\nconst incomingText = webhookBody[\"message[add][0][text]\"] || \"\";\n\n// 1. Extraer Email del texto del mensaje\nconst emailMatches = incomingText.match(/[\\w.-]+@[\\w.-]+\\.[a-zA-Z]+/);\nconst emailFromText = emailMatches ? emailMatches[0].trim().toLowerCase() : \"\";\n\n// Unificar Email buscado\nconst emailToFind = emailFromContact || emailFromText;\n\n// 2. Extraer Nombre y Empresa del texto del mensaje\nlet nombreFromText = \"\";\nlet empresaFromText = \"\";\nconst textMatch = incomingText.match(/soy\\s+(.*?)\\s+de\\s+la\\s+empresa\\s+(.*?)(?:,|\\.)/i);\nif (textMatch) {\n  nombreFromText = textMatch[1].trim().toLowerCase();\n  empresaFromText = textMatch[2].trim().toLowerCase();\n}\n\nif (!rows || rows.length <= 1) {\n  return []; // Parar el flujo si no hay filas\n}\n\nconst headers = rows[0];\nconst leadIdIndex = headers.indexOf('kommo_lead_id');\nconst emailIndex = headers.indexOf('email');\nconst phoneIndex = headers.indexOf('telefono');\nconst nombreIndex = headers.indexOf('nombre');\nconst empresaIndex = headers.indexOf('empresa');\nconst estadoIndex = headers.indexOf('estado');\nconst contactIdIndex = headers.indexOf('kommo_contact_id');\n\n// --- ESTRATEGIA 1: Buscar por Email (de abajo hacia arriba, más reciente primero) ---\nif (emailToFind && emailIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowEmail = (row[emailIndex] || \"\").trim().toLowerCase();\n    if (rowEmail === emailToFind) {\n      return [{\n        json: {\n          found: true,\n          rowNumber: i + 1,\n          leadId: row[leadIdIndex] || leadIdToFind,\n          matchType: 'email',\n          telefono: phoneToFind,\n          contactId: contactIdIndex !== -1 ? row[contactIdIndex] || \"\" : \"\"\n        }\n      }];\n    }\n  }\n}\n\n// --- ESTRATEGIA 2: Buscar por Nombre y Empresa (de abajo hacia arriba, más reciente primero) ---\nif (nombreFromText && empresaFromText && nombreIndex !== -1 && empresaIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowNombre = (row[nombreIndex] || \"\").trim().toLowerCase();\n    const rowEmpresa = (row[empresaIndex] || \"\").trim().toLowerCase();\n    \n    if (\n      (rowNombre.includes(nombreFromText) || nombreFromText.includes(rowNombre)) &&\n      (rowEmpresa.includes(empresaFromText) || empresaFromText.includes(rowEmpresa))\n    ) {\n      return [{\n        json: {\n          found: true,\n          rowNumber: i + 1,\n          leadId: row[leadIdIndex] || leadIdToFind,\n          matchType: 'nombre_empresa',\n          telefono: phoneToFind,\n          contactId: contactIdIndex !== -1 ? row[contactIdIndex] || \"\" : \"\"\n        }\n      }];\n    }\n  }\n}\n\n// --- ESTRATEGIA 3: Buscar por Kommo Lead ID (de abajo hacia arriba, más reciente primero) ---\nif (leadIdToFind && leadIdIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    if (row[leadIdIndex] === String(leadIdToFind)) {\n      return [{\n        json: {\n          found: true,\n          rowNumber: i + 1,\n          leadId: leadIdToFind,\n          matchType: 'lead_id',\n          telefono: phoneToFind,\n          contactId: contactIdIndex !== -1 ? row[contactIdIndex] || \"\" : \"\"\n        }\n      }];\n    }\n  }\n}\n\n// --- ESTRATEGIA 4: Buscar por Teléfono (normalizado, de abajo hacia arriba, más reciente primero) ---\nif (phoneToFind && phoneIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowPhone = (row[phoneIndex] || \"\").replace(/\\D/g, \"\");\n    if (rowPhone && (rowPhone === phoneToFind || phoneToFind.endsWith(rowPhone) || rowPhone.endsWith(phoneToFind))) {\n      return [{\n        json: {\n          found: true,\n          rowNumber: i + 1,\n          leadId: row[leadIdIndex] || leadIdToFind,\n          matchType: 'phone',\n          telefono: phoneToFind,\n          contactId: contactIdIndex !== -1 ? row[contactIdIndex] || \"\" : \"\"\n        }\n      }];\n    }\n  }\n}\n\n// --- ESTRATEGIA 5: Fallback al último lead en \"esperando_chat\" (de abajo hacia arriba) ---\nif (estadoIndex !== -1) {\n  for (let i = rows.length - 1; i >= 1; i--) {\n    const row = rows[i];\n    const rowEstado = (row[estadoIndex] || \"\").trim().toLowerCase();\n    const rowPhone = (row[phoneIndex] || \"\").trim();\n    if (rowEstado === 'esperando_chat' && !rowPhone) {\n      return [{\n        json: {\n          found: true,\n          rowNumber: i + 1,\n          leadId: row[leadIdIndex] || leadIdToFind,\n          matchType: 'fallback_esperando_chat',\n          telefono: phoneToFind,\n          contactId: contactIdIndex !== -1 ? row[contactIdIndex] || \"\" : \"\"\n        }\n      }];\n    }\n  }\n}\n\nreturn []; // Detener el flujo si no se encuentra nada\n"
+          },
+          "id": "chatbot-search-lead",
+          "name": "Buscar Lead en Sheets",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            1380,
+            200
+          ]
+        },
+        {
+          "parameters": {
+            "conditions": {
+              "boolean": [
+                {
+                  "value1": "={{ $json.found }}",
+                  "value2": true
+                }
+              ]
+            }
+          },
+          "id": "chatbot-if-found",
+          "name": "Lead Encontrado en Sheets?",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 2.2,
+          "position": [
+            1540,
+            200
+          ]
+        },
+        {
+          "parameters": {
+            "method": "PUT",
+            "url": "=https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!H{{ $json.rowNumber }}:I{{ $json.rowNumber }}?valueInputOption=USER_ENTERED",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $('Intercambiar Token Sheets').item.json.access_token }}"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={\n  \"values\": [[\n    \"chat_iniciado\",\n    \"{{ $json.telefono }}\"\n  ]]\n}"
+          },
+          "id": "chatbot-update-sheets",
+          "name": "Actualizar Sheets Chatbot",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            1740,
+            150
+          ]
+        },
+        {
+          "parameters": {
+            "method": "PATCH",
+            "url": "=https://centauroadss.kommo.com/api/v4/leads/{{ $('Lead Encontrado en Sheets?').item.json.leadId }}",
+            "authentication": "predefinedCredentialType",
+            "nodeCredentialType": "kommoOAuth2Api",
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={\n  \"status_id\": 107458283\n}",
+            "options": {}
+          },
+          "id": "chatbot-update-kommo",
+          "name": "Actualizar Lead en Kommo",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            2740,
+            150
+          ],
+          "credentials": {
+            "kommoOAuth2Api": {
+              "id": "qOUudAeGZLTSByTX",
+              "name": "Kommo account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "method": "POST",
+            "url": "=https://centauroadss.kommo.com/api/v4/leads/{{ $('Buscar Lead en Sheets').item.json.leadId }}/link",
+            "authentication": "predefinedCredentialType",
+            "nodeCredentialType": "kommoOAuth2Api",
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "=[\n  {\n    \"to_entity_id\": {{ Number($('Webhook Entrante').first().json.body[\"message[add][0][contact_id]\"] || $('Webhook Entrante').first().json.body[\"talk[add][0][contact_id]\"]) }},\n    \"to_entity_type\": \"contacts\"\n  }\n]",
+            "options": {}
+          },
+          "id": "chatbot-link-original",
+          "name": "Vincular Chat a Lead Original",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            1940,
+            150
+          ],
+          "credentials": {
+            "kommoOAuth2Api": {
+              "id": "qOUudAeGZLTSByTX",
+              "name": "Kommo account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "conditions": {
+              "string": [
+                {
+                  "value1": "={{ $('Buscar Lead en Sheets').item.json.contactId }}",
+                  "operation": "isNotEmpty"
+                }
+              ]
+            },
+            "options": {}
+          },
+          "id": "chatbot-has-contact-id",
+          "name": "Tiene Contact ID?",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 2,
+          "position": [
+            2140,
+            150
+          ]
+        },
+        {
+          "parameters": {
+            "method": "PATCH",
+            "url": "=https://centauroadss.kommo.com/api/v4/contacts/{{ $('Buscar Lead en Sheets').item.json.contactId }}",
+            "authentication": "predefinedCredentialType",
+            "nodeCredentialType": "kommoOAuth2Api",
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={\n  \"custom_fields_values\": [\n    {\n      \"field_code\": \"PHONE\",\n      \"values\": [{ \"value\": \"{{ $('Buscar Lead en Sheets').item.json.telefono }}\", \"enum_code\": \"WORK\" }]\n    }\n  ]\n}",
+            "options": {}
+          },
+          "id": "chatbot-update-contact",
+          "name": "Actualizar Contacto Original",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            2340,
+            50
+          ],
+          "credentials": {
+            "kommoOAuth2Api": {
+              "id": "qOUudAeGZLTSByTX",
+              "name": "Kommo account"
+            }
+          }
+        },
+        {
+          "parameters": {
+            "method": "PATCH",
+            "url": "=https://centauroadss.kommo.com/api/v4/leads/{{ $('Webhook Entrante').first().json.body[\"message[add][0][entity_id]\"] || $('Webhook Entrante').first().json.body[\"talk[add][0][entity_id]\"] }}",
+            "authentication": "predefinedCredentialType",
+            "nodeCredentialType": "kommoOAuth2Api",
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={\n  \"status_id\": 143\n}",
+            "options": {}
+          },
+          "id": "chatbot-archive-duplicate",
+          "name": "Archivar Lead de Chat Duplicado",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            2540,
+            150
+          ],
+          "credentials": {
+            "kommoOAuth2Api": {
+              "id": "qOUudAeGZLTSByTX",
+              "name": "Kommo account"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Webhook Entrante": {
+          "main": [
+            [
+              {
+                "node": "¿Es mensaje incoming?",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "¿Es mensaje incoming?": {
+          "main": [
+            [
+              {
+                "node": "Generar Respuesta Inteligente",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Generar Respuesta Inteligente": {
+          "main": [
+            [
+              {
+                "node": "Obtener Telefono desde Kommo",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Obtener Telefono desde Kommo": {
+          "main": [
+            [
+              {
+                "node": "Enviar WhatsApp por Meta",
+                "type": "main",
+                "index": 0
+              },
+              {
+                "node": "Generar JWT Sheets",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Generar JWT Sheets": {
+          "main": [
+            [
+              {
+                "node": "Intercambiar Token Sheets",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Intercambiar Token Sheets": {
+          "main": [
+            [
+              {
+                "node": "Leer Leads en Chatbot",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Leer Leads en Chatbot": {
+          "main": [
+            [
+              {
+                "node": "Buscar Lead en Sheets",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Buscar Lead en Sheets": {
+          "main": [
+            [
+              {
+                "node": "Lead Encontrado en Sheets?",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Lead Encontrado en Sheets?": {
+          "main": [
+            [
+              {
+                "node": "Actualizar Sheets Chatbot",
+                "type": "main",
+                "index": 0
+              }
+            ],
+            []
+          ]
+        },
+        "Actualizar Sheets Chatbot": {
+          "main": [
+            [
+              {
+                "node": "Vincular Chat a Lead Original",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Vincular Chat a Lead Original": {
+          "main": [
+            [
+              {
+                "node": "Tiene Contact ID?",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Tiene Contact ID?": {
+          "main": [
+            [
+              {
+                "node": "Actualizar Contacto Original",
+                "type": "main",
+                "index": 0
+              }
+            ],
+            [
+              {
+                "node": "Archivar Lead de Chat Duplicado",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Actualizar Contacto Original": {
+          "main": [
+            [
+              {
+                "node": "Archivar Lead de Chat Duplicado",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Archivar Lead de Chat Duplicado": {
+          "main": [
+            [
+              {
+                "node": "Actualizar Lead en Kommo",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "authors": "Joao Nelo",
+      "name": null,
+      "description": null,
+      "autosaved": false,
+      "workflowPublishHistory": [
+        {
+          "createdAt": "2026-06-13T21:20:03.150Z",
+          "id": 256,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "activated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:31:44.647Z",
+          "id": 331,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "activated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:38:12.267Z",
+          "id": 339,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "activated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:39:40.856Z",
+          "id": 347,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "activated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:40:43.307Z",
+          "id": 355,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "activated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:42:01.199Z",
+          "id": 363,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "activated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:31:44.632Z",
+          "id": 330,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "deactivated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:38:12.251Z",
+          "id": 338,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "deactivated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:39:40.833Z",
+          "id": 346,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "deactivated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:40:43.293Z",
+          "id": 354,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "deactivated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        },
+        {
+          "createdAt": "2026-06-14T02:42:01.183Z",
+          "id": 362,
+          "workflowId": "U02Z6lSLDwTr6Ber",
+          "versionId": "70e7b70a-cd29-471b-b263-c62380c01f23",
+          "event": "deactivated",
+          "userId": "27ca8d1e-d648-4550-8703-f5b38eef5d90"
+        }
+      ]
+    },
+    "scopes": [
+      "workflow:create",
+      "workflow:delete",
+      "workflow:execute",
+      "workflow:execute-chat",
+      "workflow:list",
+      "workflow:move",
+      "workflow:publish",
+      "workflow:read",
+      "workflow:share",
+      "workflow:unpublish",
+      "workflow:update"
+    ],
+    "checksum": "83bf1dd8783aa7a835a4436bffdf8ecff0459817a4bed389e1655fd37249d501"
+  }
+}
