@@ -285,19 +285,11 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{ $json.id ? 'succeeded' : 'failed' }}",
-              "operation": "equal",
-              "value2": "succeeded"
-            }
-          ]
-        }
+        "jsCode": "const resendOutput = $input.item.json;\nconst hasId = !!(resendOutput && resendOutput.id);\nreturn [{\n  json: {\n    email_estado: hasId ? 'enviado' : 'error'\n  }\n}];"
       },
-      "id": "check-resend-status",
-      "name": "Check Resend Status",
-      "type": "n8n-nodes-base.if",
+      "id": "determinar-estado-email",
+      "name": "Determinar Estado Email",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1580,
@@ -319,43 +311,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"values\": [[\"enviado\"]]\n}",
+        "jsonBody": "={\n  \"values\": [[\"{{ $json.email_estado }}\"]]\n}",
         "options": {}
       },
-      "id": "log-email-success",
-      "name": "Log Email Success",
+      "id": "log-email-status",
+      "name": "Log Email Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         1800,
-        100
-      ]
-    },
-    {
-      "parameters": {
-        "method": "PUT",
-        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!M{{ $('Log en Google Sheets').item.json.updates.updatedRange.split('!A')[1].split(':')[0] }}?valueInputOption=USER_ENTERED",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('Intercambiar Token Sheets').item.json.access_token }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"values\": [[\"error\"]]\n}",
-        "options": {}
-      },
-      "id": "log-email-error",
-      "name": "Log Email Error",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1800,
-        300
+        200
       ]
     }
   ],
@@ -431,25 +396,7 @@
       "main": [
         [
           {
-            "node": "Check Resend Status",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Resend Status": {
-      "main": [
-        [
-          {
-            "node": "Log Email Success",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Log Email Error",
+            "node": "Determinar Estado Email",
             "type": "main",
             "index": 0
           }
