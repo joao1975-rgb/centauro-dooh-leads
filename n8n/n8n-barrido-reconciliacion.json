@@ -23,36 +23,6 @@
     },
     {
       "parameters": {
-        "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "Leads"
-        },
-        "options": {}
-      },
-      "id": "sheets-read",
-      "name": "Leer toda la hoja",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        420,
-        300
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "2awdtPjJDvJMLOsi",
-          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
-        }
-      }
-    },
-    {
-      "parameters": {
         "jsCode": "// Selecciona leads que esperan chat y AUN no tienen telefono.\nconst items = $input.all();\nconst out = [];\nconst now = Date.now();\nconst MAX_MS = 48 * 60 * 60 * 1000; // 48h: tras esto se marca sin_whatsapp\n\nfor (const it of items) {\n  const r = it.json || {};\n  const tel = (r.telefono || '').toString().trim();\n  const estado = (r.estado || '').toString().trim();\n  const pendiente = !tel && (estado === 'esperando_chat' || estado === 'chat_iniciado');\n  if (!pendiente) continue;\n  if (!r.kommo_lead_id) continue;\n  const ts = Date.parse(r.timestamp);\n  const ageMs = isNaN(ts) ? 0 : (now - ts);\n  out.push({ json: {\n    kommo_lead_id: String(r.kommo_lead_id),\n    ref_code: r.ref_code || '',\n    expirado: ageMs > MAX_MS\n  }});\n}\nreturn out;"
       },
       "id": "code-filter",
@@ -90,7 +60,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const base = $('Filtrar pendientes').item.json;\nconst lead = $json || {};\nconst contactos = (lead._embedded && lead._embedded.contacts) || [];\ncontactos.sort((a, b) => (b.is_main === true) - (a.is_main === true));\nconst contactId = contactos.length ? String(contactos[0].id) : '';\nreturn [{ json: { kommo_lead_id: base.kommo_lead_id, ref_code: base.ref_code, expirado: base.expirado, contactId } }];"
+        "jsCode": "const base = $('Filtrar pendientes').item.json;\nconst lead = (typeof $json.data === 'string') ? JSON.parse($json.data) : ($json || {});\nconst contactos = (lead._embedded && lead._embedded.contacts) || [];\ncontactos.sort((a, b) => (b.is_main === true) - (a.is_main === true));\nconst contactId = contactos.length ? String(contactos[0].id) : '';\nreturn [{ json: { kommo_lead_id: base.kommo_lead_id, ref_code: base.ref_code, expirado: base.expirado, contactId } }];"
       },
       "id": "code-pick-b",
       "name": "Elegir contacto barrido",
@@ -127,7 +97,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const base = $('Elegir contacto barrido').item.json;\nconst contact = $json || {};\n\nfunction normalizar(raw) {\n  if (raw === null || raw === undefined) return '';\n  let d = String(raw).replace(/[^\\d]/g, '');\n  if (d.startsWith('0') && d.length === 11) {\n    d = d.slice(1);\n  }\n  if (d.length < 10) return '';\n  if (!d.startsWith('58') && d.length === 10) d = '58' + d;\n  return d;\n}\n\nlet telefono = '';\nconst campos = contact.custom_fields_values || [];\nfor (const f of campos) {\n  if (f.field_code === 'PHONE' || f.field_type === 'phone') {\n    for (const v of (f.values || [])) {\n      const t = normalizar(v.value);\n      if (t) { telefono = t; break; }\n    }\n  }\n  if (telefono) break;\n}\n\nif (telefono) {\n  return [{ json: { kommo_lead_id: base.kommo_lead_id, telefono, kommo_contact_id: base.contactId || '', estado: 'chat_iniciado' } }];\n}\n// Sin telefono y ya paso la ventana de 48h -> estado terminal para no reintentar por siempre.\nif (base.expirado) {\n  return [{ json: { kommo_lead_id: base.kommo_lead_id, telefono: '', kommo_contact_id: base.contactId || '', estado: 'sin_whatsapp' } }];\n}\n// Aun dentro de la ventana: seguir esperando, no escribir nada.\nreturn [];"
+        "jsCode": "const base = $('Elegir contacto barrido').item.json;\nconst contact = (typeof $json.data === 'string') ? JSON.parse($json.data) : ($json || {});\n\nfunction normalizar(raw) {\n  if (raw === null || raw === undefined) return '';\n  let d = String(raw).replace(/[^\\d]/g, '');\n  if (d.startsWith('0') && d.length === 11) {\n    d = d.slice(1);\n  }\n  if (d.length < 10) return '';\n  if (!d.startsWith('58') && d.length === 10) d = '58' + d;\n  return d;\n}\n\nlet telefono = '';\nconst campos = contact.custom_fields_values || [];\nfor (const f of campos) {\n  if (f.field_code === 'PHONE' || f.field_type === 'phone') {\n    for (const v of (f.values || [])) {\n      const t = normalizar(v.value);\n      if (t) { telefono = t; break; }\n    }\n  }\n  if (telefono) break;\n}\n\nif (telefono) {\n  return [{ json: { kommo_lead_id: base.kommo_lead_id, telefono, kommo_contact_id: base.contactId || '', estado: 'chat_iniciado' } }];\n}\n// Sin telefono y ya paso la ventana de 48h -> estado terminal para no reintentar por siempre.\nif (base.expirado) {\n  return [{ json: { kommo_lead_id: base.kommo_lead_id, telefono: '', kommo_contact_id: base.contactId || '', estado: 'sin_whatsapp' } }];\n}\n// Aun dentro de la ventana: seguir esperando, no escribir nada.\nreturn [];"
       },
       "id": "code-extract-b",
       "name": "Resolver telefono o expirar",
@@ -140,45 +110,560 @@
     },
     {
       "parameters": {
-        "operation": "update",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-dkfju",
+      "name": "Generar JWT Sheets Front",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-gfbi4",
+      "name": "Intercambiar Token Sheets Front",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        550,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const values = $json.values || [];\nif (values.length <= 1) return [];\nconst headers = values[0];\nconst results = [];\nfor (let i = 1; i < values.length; i++) {\n  const row = values[i];\n  const obj = {};\n  for (let j = 0; j < headers.length; j++) {\n    obj[headers[j]] = row[j] !== undefined ? row[j] : \"\";\n  }\n  results.push({ json: obj });\n}\nreturn results;"
+      },
+      "id": "convert-n8n-w8lj2",
+      "name": "Convertir Hojas a Formato n8n",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        950,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-yuhse",
+      "name": "Generar JWT Sheets Back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-s9uxl",
+      "name": "Intercambiar Token Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:L",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        }
+      },
+      "id": "get-sheets-back-wst0d",
+      "name": "Obtener Leads Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevNode = $('Resolver telefono o expirar').item.json;\nconst kommoLeadId = prevNode.kommo_lead_id;\nconst telefono = prevNode.telefono;\nconst contactId = prevNode.kommo_contact_id;\nconst estado = prevNode.estado;\n\nconst sheetData = $json.values || [];\nlet rowIndex = -1;\nlet matchedRow = null;\n\nfor (let i = 0; i < sheetData.length; i++) {\n  const row = sheetData[i];\n  if (row[6] === kommoLeadId) {\n    rowIndex = i + 1; // 1-indexed row number\n    matchedRow = [...row];\n    break;\n  }\n}\n\nif (rowIndex === -1) {\n  throw new Error(\"No se encontro el kommo_lead_id \" + kommoLeadId + \" en la hoja.\");\n}\n\n// Update the cells in the matched row\nmatchedRow[7] = estado; // estado\nmatchedRow[8] = telefono; // telefono\nmatchedRow[9] = contactId; // kommo_contact\n\nreturn [{\n  json: {\n    found: true,\n    rowNumber: rowIndex,\n    range: \"Leads!A\" + rowIndex + \":L\" + rowIndex,\n    values: [matchedRow]\n  }\n}];"
+      },
+      "id": "prepare-upsert-back-qwmo7",
+      "name": "Buscar y Preparar Update Barrido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-3cajz",
+      "name": "Generar JWT Sheets Front",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-7trq2",
+      "name": "Intercambiar Token Sheets Front",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        550,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const values = $json.values || [];\nif (values.length <= 1) return [];\nconst headers = values[0];\nconst results = [];\nfor (let i = 1; i < values.length; i++) {\n  const row = values[i];\n  const obj = {};\n  for (let j = 0; j < headers.length; j++) {\n    obj[headers[j]] = row[j] !== undefined ? row[j] : \"\";\n  }\n  results.push({ json: obj });\n}\nreturn results;"
+      },
+      "id": "convert-n8n-pjytn",
+      "name": "Convertir Hojas a Formato n8n",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        950,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-icgxt",
+      "name": "Generar JWT Sheets Back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-cgsdw",
+      "name": "Intercambiar Token Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:L",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        }
+      },
+      "id": "get-sheets-back-cv1ic",
+      "name": "Obtener Leads Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevNode = $('Resolver telefono o expirar').item.json;\nconst kommoLeadId = prevNode.kommo_lead_id;\nconst telefono = prevNode.telefono;\nconst contactId = prevNode.kommo_contact_id;\nconst estado = prevNode.estado;\n\nconst sheetData = $json.values || [];\nlet rowIndex = -1;\nlet matchedRow = null;\n\nfor (let i = 0; i < sheetData.length; i++) {\n  const row = sheetData[i];\n  if (row[6] === kommoLeadId) {\n    rowIndex = i + 1; // 1-indexed row number\n    matchedRow = [...row];\n    break;\n  }\n}\n\nif (rowIndex === -1) {\n  throw new Error(\"No se encontro el kommo_lead_id \" + kommoLeadId + \" en la hoja.\");\n}\n\n// Update the cells in the matched row\nmatchedRow[7] = estado; // estado\nmatchedRow[8] = telefono; // telefono\nmatchedRow[9] = contactId; // kommo_contact\n\nreturn [{\n  json: {\n    found: true,\n    rowNumber: rowIndex,\n    range: \"Leads!A\" + rowIndex + \":L\" + rowIndex,\n    values: [matchedRow]\n  }\n}];"
+      },
+      "id": "prepare-upsert-back-u699z",
+      "name": "Buscar y Preparar Update Barrido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-03kqy",
+      "name": "Generar JWT Sheets Front",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-oul7t",
+      "name": "Intercambiar Token Sheets Front",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        550,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const values = $json.values || [];\nif (values.length <= 1) return [];\nconst headers = values[0];\nconst results = [];\nfor (let i = 1; i < values.length; i++) {\n  const row = values[i];\n  const obj = {};\n  for (let j = 0; j < headers.length; j++) {\n    obj[headers[j]] = row[j] !== undefined ? row[j] : \"\";\n  }\n  results.push({ json: obj });\n}\nreturn results;"
+      },
+      "id": "convert-n8n-ogv00",
+      "name": "Convertir Hojas a Formato n8n",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        950,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-p9j40",
+      "name": "Generar JWT Sheets Back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-cxjhy",
+      "name": "Intercambiar Token Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:L",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        }
+      },
+      "id": "get-sheets-back-x566h",
+      "name": "Obtener Leads Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevNode = $('Resolver telefono o expirar').item.json;\nconst kommoLeadId = prevNode.kommo_lead_id;\nconst telefono = prevNode.telefono;\nconst contactId = prevNode.kommo_contact_id;\nconst estado = prevNode.estado;\n\nconst sheetData = $json.values || [];\nlet rowIndex = -1;\nlet matchedRow = null;\n\nfor (let i = 0; i < sheetData.length; i++) {\n  const row = sheetData[i];\n  if (row[6] === kommoLeadId) {\n    rowIndex = i + 1; // 1-indexed row number\n    matchedRow = [...row];\n    break;\n  }\n}\n\nif (rowIndex === -1) {\n  throw new Error(\"No se encontro el kommo_lead_id \" + kommoLeadId + \" en la hoja.\");\n}\n\n// Update the cells in the matched row\nmatchedRow[7] = estado; // estado\nmatchedRow[8] = telefono; // telefono\nmatchedRow[9] = contactId; // kommo_contact\n\nreturn [{\n  json: {\n    found: true,\n    rowNumber: rowIndex,\n    range: \"Leads!A\" + rowIndex + \":L\" + rowIndex,\n    values: [matchedRow]\n  }\n}];"
+      },
+      "id": "prepare-upsert-back-w4a4u",
+      "name": "Buscar y Preparar Update Barrido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-4xb4q",
+      "name": "Generar JWT Sheets Front",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-g13k3",
+      "name": "Intercambiar Token Sheets Front",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        550,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:L",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        }
+      },
+      "id": "sheets-read",
+      "name": "Leer toda la hoja",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        750,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const values = $json.values || [];\nif (values.length <= 1) return [];\nconst headers = values[0];\nconst results = [];\nfor (let i = 1; i < values.length; i++) {\n  const row = values[i];\n  const obj = {};\n  for (let j = 0; j < headers.length; j++) {\n    obj[headers[j]] = row[j] !== undefined ? row[j] : \"\";\n  }\n  results.push({ json: obj });\n}\nreturn results;"
+      },
+      "id": "convert-n8n-z81hv",
+      "name": "Convertir Hojas a Formato n8n",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        950,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-fnmtu",
+      "name": "Generar JWT Sheets Back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-sbzi0",
+      "name": "Intercambiar Token Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:L",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        }
+      },
+      "id": "get-sheets-back-mu4r4",
+      "name": "Obtener Leads Sheets Back",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2120,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prevNode = $('Resolver telefono o expirar').item.json;\nconst kommoLeadId = prevNode.kommo_lead_id;\nconst telefono = prevNode.telefono;\nconst contactId = prevNode.kommo_contact_id;\nconst estado = prevNode.estado;\n\nconst sheetData = $json.values || [];\nlet rowIndex = -1;\nlet matchedRow = null;\n\nfor (let i = 0; i < sheetData.length; i++) {\n  const row = sheetData[i];\n  if (row[6] === kommoLeadId) {\n    rowIndex = i + 1; // 1-indexed row number\n    matchedRow = [...row];\n    break;\n  }\n}\n\nif (rowIndex === -1) {\n  throw new Error(\"No se encontro el kommo_lead_id \" + kommoLeadId + \" en la hoja.\");\n}\n\n// Update the cells in the matched row\nmatchedRow[7] = estado; // estado\nmatchedRow[8] = telefono; // telefono\nmatchedRow[9] = contactId; // kommo_contact\n\nreturn [{\n  json: {\n    found: true,\n    rowNumber: rowIndex,\n    range: \"Leads!A\" + rowIndex + \":L\" + rowIndex,\n    values: [matchedRow]\n  }\n}];"
+      },
+      "id": "prepare-upsert-back-kcshx",
+      "name": "Buscar y Preparar Update Barrido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/{{ $json.range }}?valueInputOption=USER_ENTERED",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Intercambiar Token Sheets Back').item.json.access_token }}"
+            }
+          ]
         },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "Leads"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "matchingColumns": [
-            "kommo_lead_id"
-          ],
-          "value": {
-            "kommo_lead_id": "={{ $json.kommo_lead_id }}",
-            "telefono": "={{ $json.telefono }}",
-            "kommo_contact": "={{ $json.kommo_contact_id }}",
-            "estado": "={{ $json.estado }}"
-          }
-        },
-        "options": {}
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"values\": {{ JSON.stringify($json.values) }}\n}"
       },
       "id": "sheets-update-b",
       "name": "Upsert por kommo_lead_id",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        1740,
-        300
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "2awdtPjJDvJMLOsi",
-          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
-        }
-      }
+        2520,
+        150
+      ]
     }
   ],
   "connections": {
@@ -186,7 +671,7 @@
       "main": [
         [
           {
-            "node": "Leer toda la hoja",
+            "node": "Generar JWT Sheets Front",
             "type": "main",
             "index": 0
           }
@@ -197,7 +682,7 @@
       "main": [
         [
           {
-            "node": "Filtrar pendientes",
+            "node": "Convertir Hojas a Formato n8n",
             "type": "main",
             "index": 0
           }
@@ -249,6 +734,83 @@
       ]
     },
     "Resolver telefono o expirar": {
+      "main": [
+        [
+          {
+            "node": "Generar JWT Sheets Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar JWT Sheets Front": {
+      "main": [
+        [
+          {
+            "node": "Intercambiar Token Sheets Front",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intercambiar Token Sheets Front": {
+      "main": [
+        [
+          {
+            "node": "Leer toda la hoja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir Hojas a Formato n8n": {
+      "main": [
+        [
+          {
+            "node": "Filtrar pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar JWT Sheets Back": {
+      "main": [
+        [
+          {
+            "node": "Intercambiar Token Sheets Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intercambiar Token Sheets Back": {
+      "main": [
+        [
+          {
+            "node": "Obtener Leads Sheets Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Leads Sheets Back": {
+      "main": [
+        [
+          {
+            "node": "Buscar y Preparar Update Barrido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar y Preparar Update Barrido": {
       "main": [
         [
           {

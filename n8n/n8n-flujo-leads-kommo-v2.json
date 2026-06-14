@@ -15,17 +15,18 @@
       "position": [
         220,
         300
-      ]
+      ],
+      "webhookId": "lead-dooh-api"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://{{$env.KOMMO_SUBDOMAIN || 'centauroadss'}}.kommo.com/api/v4/leads/complex",
+        "url": "=https://{{$env.KOMMO_SUBDOMAIN || 'centauroadss'}}.kommo.com/api/v4/leads/complex",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "=[{\n  \"name\": \"DOOH [{{ $json.body.tipo_dispositivo }}] {{ $json.body.screen_id }} - {{ $json.body.empresa }}\",\n  \"pipeline_id\": {{ $env.KOMMO_PIPELINE_ID || 13925343 }},\n  \"status_id\": {{ $json.body.consentimiento == true || $json.body.consentimiento === 'true' ? ($env.KOMMO_STATUS_CLASIFICADO_ID || 107458282) : 107458279 }},\n  \"_embedded\": {\n    \"tags\": [\n      { \"name\": \"Int_DOOH\" }\n    ],\n    \"contacts\": [{\n      \"first_name\": \"{{ $json.body.nombre }}\",\n      \"custom_fields_values\": [\n        { \"field_code\": \"EMAIL\", \"values\": [{ \"value\": \"{{ $json.body.email }}\", \"enum_code\": \"WORK\" }] }\n      ]\n    }],\n    \"companies\": [{ \"name\": \"{{ $json.body.empresa }}\" }]\n  },\n  \"custom_fields_values\": [\n    { \"field_id\": 1795614, \"values\": [{ \"value\": \"{{ $json.body.screen_id }}\" }] },\n    { \"field_id\": 1795616, \"values\": [{ \"value\": \"{{ $json.body.tipo_dispositivo }}\" }] }\n  ]\n}]",
+        "jsonBody": "=[{\n  \"name\": \"DOOH [{{ $json.body.tipo_dispositivo }}] {{ $json.body.screen_id }} - {{ $json.body.empresa }}\",\n  \"pipeline_id\": {{ $env.KOMMO_PIPELINE_ID || 13925343 }},\n  \"status_id\": {{ $json.body.consentimiento == true || $json.body.consentimiento === 'true' ? ($env.KOMMO_STATUS_CLASIFICADO_ID || 107458279) : 107458279 }},\n  \"_embedded\": {\n    \"tags\": [\n      { \"name\": \"Int_DOOH\" }\n    ],\n    \"contacts\": [{\n      \"first_name\": \"{{ $json.body.nombre }}\",\n      \"custom_fields_values\": [\n        { \"field_code\": \"EMAIL\", \"values\": [{ \"value\": \"{{ $json.body.email }}\", \"enum_code\": \"WORK\" }] }\n      ]\n    }],\n    \"companies\": [{ \"name\": \"{{ $json.body.empresa }}\" }]\n  },\n  \"custom_fields_values\": [\n    { \"field_id\": 1795614, \"values\": [{ \"value\": \"{{ $json.body.screen_id }}\" }] },\n    { \"field_id\": 1795616, \"values\": [{ \"value\": \"{{ $json.body.tipo_dispositivo }}\" }] }\n  ]\n}]",
         "options": {}
       },
       "id": "kommo-lead",
@@ -42,54 +43,6 @@
         "httpHeaderAuth": {
           "id": "F9TW6Fo6bqofPvXr",
           "name": "Header Auth account 3"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "list",
-          "value": "Leads"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "timestamp": "={{ $('Webhook Lead DOOH').item.json.body.timestamp }}",
-            "screen_id": "={{ $('Webhook Lead DOOH').item.json.body.screen_id }}",
-            "nombre": "={{ $('Webhook Lead DOOH').item.json.body.nombre }}",
-            "empresa": "={{ $('Webhook Lead DOOH').item.json.body.empresa }}",
-            "email": "={{ $('Webhook Lead DOOH').item.json.body.email }}",
-            "tipo_dispositivo": "={{ $('Webhook Lead DOOH').item.json.body.tipo_dispositivo }}",
-            "kommo_lead_id": "={{ $json.id || '' }}",
-            "estado": "={{ $('Webhook Lead DOOH').item.json.body.consentimiento == true || $('Webhook Lead DOOH').item.json.body.consentimiento === 'true' ? 'esperando_chat' : 'sin_consentimiento' }}",
-            "telefono": "",
-            "kommo_contact": "={{ $json.contact_id || '' }}",
-            "Consentimiento": "={{ $('Webhook Lead DOOH').item.json.body.consentimiento == true || $('Webhook Lead DOOH').item.json.body.consentimiento === 'true' ? 'Sí' : 'No' }}",
-            "ref_code": "={{ $('Webhook Lead DOOH').item.json.body.ref_code }}"
-          }
-        },
-        "options": {}
-      },
-      "id": "sheets-log-2",
-      "name": "Log en Google Sheets",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4,
-      "position": [
-        700,
-        300
-      ],
-      "notes": "CAMBIOS v2: guarda kommo_contact (adaptado) + ref_code, deja telefono vacio y unifica estado a 'esperando_chat'. El telefono lo rellena la captura (1a) o el barrido (2a).",
-      "credentials": {
-        "googleApi": {
-          "id": "2awdtPjJDvJMLOsi",
-          "name": "Google Sheets Service Account (DOOH Leads) - Fresh 1781176008706"
         }
       }
     },
@@ -121,23 +74,6 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.BRIEF_PDF_URL || 'https://leads.centauroads.com/brief-centauro.pdf' }}",
-        "responseFormat": "file",
-        "options": {
-          "responsePropertyName": "brief_pdf"
-        }
-      },
-      "id": "descargar-pdf",
-      "name": "Descargar Brief PDF",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1140,
-        200
-      ]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://api.resend.com/emails",
         "sendHeaders": true,
@@ -151,7 +87,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"from\":\"Centauro Ads <{{$env.RESEND_FROM_EMAIL || 'info@centauroads.com'}}>\",\"to\":[\"{{ $('Webhook Lead DOOH').item.json.body.email }}\"],\"subject\":\"Brief de pantallas LED y TOTEMs - Centauro Ads\",\"html\":\"Hola {{ $('Webhook Lead DOOH').item.json.body.nombre }},<br><br>Gracias por tu interés en nuestras pantallas publicitarias DOOH.<br><br>Te adjuntamos a este correo el brief interactivo en formato PDF con toda la información técnica, ubicaciones y tarifas de nuestras pantallas y tótems.<br><br>También puedes verlo en línea aquí: <strong><a href=\\\"https://links.centauroads.com/oferta-dooh\\\">Ver Brief en Canva</a></strong><br><br>Un asesor comercial te atenderá en breve por WhatsApp desde nuestra línea verificada para responder cualquier pregunta o cotización.<br><br>Atentamente,<br>El equipo de Centauro Ads\",\"attachments\":[{\"filename\":\"Brief_Centauro_Ads.pdf\",\"content\":\"{{ $binary.brief_pdf.data }}\"}]}",
+        "jsonBody": "={\n  \"from\": \"Centauro Ads <mercadeo@centauroads.com>\",\n  \"to\": [\"{{ $('Webhook Lead DOOH').item.json.body.email }}\"],\n  \"subject\": \"Brief de pantallas LED y TOTEMs - Centauro Ads\",\n  \"html\": \"<div style=\\\"font-family: Arial, Helvetica, sans-serif; background-color: #f4f6f9; padding: 30px 15px; min-height: 100%; margin: 0;\\\">  <div style=\\\"max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e1e4e8; border-radius: 12px; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);\\\">        <!-- Header Logo -->    <div style=\\\"text-align: center; margin-bottom: 30px;\\\">      <img src=\\\"https://leads.centauroads.com/centauro_logo_full.png\\\" alt=\\\"Centauro Ads\\\" style=\\\"max-width: 180px; height: auto;\\\" />    </div>        <!-- Text Content -->    <div style=\\\"color: #333333; font-size: 16px; line-height: 1.6; margin-bottom: 30px;\\\">      <p style=\\\"font-size: 18px; margin-top: 0; color: #1a1a1a;\\\">        Hola {{ `${ $('Webhook Lead DOOH').item.json.body.nombre }` }} que placer tenerte! 😊🙌      </p>      <p>        Queremos darte la bienvenida a Centauro Ads, la red de pantallas publicitarias digitales e inteligentes más grande de Caracas.      </p>      <p>        Hemos procesado tu solicitud de información comercial para pautar en nuestras pantallas publicitarias DOOH.      </p>      <p>        Haciendo clic en el siguiente enlace podrás acceder directamente al material interactivo del Brief de pantallas:      </p>    </div>        <!-- CTA Button -->    <div style=\\\"text-align: center; margin-bottom: 40px;\\\">      <a href=\\\"https://links.centauroads.com/lead-magnet\\\" target=\\\"_blank\\\" style=\\\"display: inline-block; background: linear-gradient(135deg, #ff5e62 0%, #ff9966 100%); color: #ffffff; font-weight: bold; font-size: 16px; text-decoration: none; padding: 14px 32px; border-radius: 25px; box-shadow: 0 4px 10px rgba(255, 94, 98, 0.3); transition: all 0.2s ease-in-out;\\\">        Ver Brief en Canva      </a>    </div>        <!-- Post-Button Text -->    <div style=\\\"color: #555555; font-size: 14px; line-height: 1.5; border-top: 1px solid #eeeeee; padding-top: 20px; margin-bottom: 25px;\\\">      <p style=\\\"margin: 0;\\\">        Este material interactivo en Canva te permite contar siempre con la información de tarifas y ubicaciones 100% al día, y descargarlo en formato PDF en cualquier momento.      </p>      <p style=\\\"margin-top: 10px; margin-bottom: 0;\\\">        Recuerda que un asesor comercial te contactará en breve por WhatsApp desde nuestra línea verificada para apoyarte con cualquier cotización o duda.      </p>    </div>        <div style=\\\"color: #333333; font-size: 15px; font-weight: bold; margin-bottom: 25px;\\\">      CENTAURO ADS<br>      <span style=\\\"font-size: 13px; font-weight: normal; color: #666666;\\\">visibilidad que conecta! 😉</span>    </div>        <!-- Footer / Enlaces Importantes Card -->    <div style=\\\"background-color: #0f0f11; border-radius: 10px; padding: 20px; text-align: center;\\\">      <div style=\\\"color: #ffffff; font-weight: bold; font-size: 14px; margin-bottom: 12px; letter-spacing: 0.5px;\\\">        Enlaces Importantes      </div>      <a href=\\\"https://links.centauroads.com/lead-magnet\\\" target=\\\"_blank\\\" style=\\\"display: inline-block; background-color: #222225; border: 1px solid #3c3c43; color: #ffffff; font-size: 13px; text-decoration: none; padding: 8px 20px; border-radius: 5px; font-weight: bold;\\\">        Brief      </a>    </div>      </div></div>\"\n}",
         "options": {}
       },
       "id": "resend-brief",
@@ -162,7 +98,264 @@
         1360,
         200
       ],
-      "notes": "Usa la API de Resend para enviar correos transaccionales con el PDF adjunto."
+      "notes": "Usa la API de Resend para enviar correos transaccionales con el PDF adjunto.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-8pe38",
+      "name": "Generar JWT Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-xuxp6",
+      "name": "Intercambiar Token Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-znqw6",
+      "name": "Generar JWT Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-6fgga",
+      "name": "Intercambiar Token Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-opeaq",
+      "name": "Generar JWT Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-vmaqb",
+      "name": "Intercambiar Token Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const n_b64 = \"3-P-fo2eea2eYoYwvoyjgukr09Uch-uUy04S_rlrLZAcITnXjdqAt2m0YUxuUNZ7bgdyxpVWlQqmr2zVD5fjDraMrwQ8hbeaa-YkN8xw9Ij0qGAIr2cjRW2gKaKeaouV57fW7yuvpAnY4FIjpTEVAC76neBeWMRI8eYF6DIWEdR0a7_HNUix9EvSyeiyxinB5L7QDKHaWkfKtdVxnQECT3RIf9QygscrluhUBdGiK1ELahbZrMF3ikpu20sIQLV5OHfXADp2RSdYDeFDsR-DtQGX4TGtcx-Zkj_JrA-qvp2GHklylJEK55e5JIsrUJEef2wFtLkSbCHrTS6yT-Nt7w\";\nconst d_b64 = \"W4Xhpo0w78-7882kRnjKbLzxuB4hlCSHBlbrp-pXOGB1R1XUWn4saQ3SeYXbgLs06MUts6UfqDya6BJmxIGUBZM1TmQ-c3EbNKl3O8IcmLIVxXDAjCduwTZvpyV9edOG25sIx2uF2NpXqFebj69RROpvc7NhDgtrQEuGNaWn5PA_MpB9pFQwoiYixm9LQ8iymKRyRJxZFF3_Ex-UOaRXVyxg7qsIoOH63db5ikZhUAlXUGkczQZuvWKy53Kb5Jyeb5ZSAxBnCG9w3E56AM3-eeL1NPiSSefEYTeb2IfkqFAgC_glePB96kob4Dkm1tIAnF51yUwXm9e_M86886L6KQ\";\nconst client_email = \"n8n-bot-leads@gen-lang-client-0998997067.iam.gserviceaccount.com\";\n\nfunction sha256(ascii) {\n  function rightRotate(value, amount) {\n    return (value >>> amount) | (value << (32 - amount));\n  }\n  var mathPow = Math.pow;\n  var maxWord = mathPow(2, 32);\n  var lengthProperty = 'length';\n  var i, j; \n  var hash = [\n    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,\n    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19\n  ];\n  var k = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2\n  ];\n  var words = [];\n  var asciiLength = ascii.length * 8;\n  ascii += '\\x80'; \n  while (ascii[lengthProperty] % 64 - 56) ascii += '\\x00'; \n  for (i = 0; i < ascii[lengthProperty]; i++) {\n    j = ascii.charCodeAt(i);\n    words[i >> 2] |= j << (24 - (i % 4) * 8);\n  }\n  words[words[lengthProperty]] = ((asciiLength / maxWord) | 0);\n  words[words[lengthProperty]] = (asciiLength | 0);\n  for (j = 0; j < words[lengthProperty];) {\n    var w = words.slice(j, j += 16); \n    var oldHash = hash.slice(0);\n    for (i = 0; i < 64; i++) {\n      var w15 = w[i - 15], w2 = w[i - 2];\n      var s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);\n      var s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);\n      var ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);\n      var maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);\n      var temp1 = hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + (w[i] = (i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0));\n      var temp2 = (rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj;\n      hash = [(temp1 + temp2) | 0].concat(hash); \n      hash[4] = (hash[4] + temp1) | 0;\n      hash.pop();\n    }\n    for (i = 0; i < 8; i++) {\n      hash[i] = (hash[i] + oldHash[i]) | 0;\n    }\n  }\n  const hex = [];\n  for (i = 0; i < 8; i++) {\n    var h = hash[i];\n    if (h < 0) h += maxWord;\n    var hexStr = h.toString(16);\n    while (hexStr.length < 8) hexStr = '0' + hexStr;\n    hex.push(hexStr);\n  }\n  return Buffer.from(hex.join(''), 'hex');\n}\n\nfunction modPow(base, exponent, modulus) {\n  if (modulus === 1n) return 0n;\n  let result = 1n;\n  base = base % modulus;\n  while (exponent > 0n) {\n    if (exponent % 2n === 1n) {\n      result = (result * base) % modulus;\n    }\n    exponent = exponent >> 1n;\n    base = (base * base) % modulus;\n  }\n  return result;\n}\n\nfunction base64UrlToBigInt(b64url) {\n  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');\n  while (b64.length % 4) b64 += '=';\n  const buf = Buffer.from(b64, 'base64');\n  return BigInt('0x' + buf.toString('hex'));\n}\n\nfunction bigIntToBuffer(num, width) {\n  let hex = num.toString(16);\n  if (hex.length % 2) hex = '0' + hex;\n  let buf = Buffer.from(hex, 'hex');\n  if (buf.length < width) {\n    const pad = Buffer.alloc(width - buf.length, 0);\n    buf = Buffer.concat([pad, buf]);\n  }\n  return buf;\n}\n\nfunction base64UrlEncode(buf) {\n  return buf.toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\nfunction signRS256(message, n_b64, d_b64) {\n  const n = base64UrlToBigInt(n_b64);\n  const d = base64UrlToBigInt(d_b64);\n  const hash = sha256(message);\n  const digestInfoPrefix = Buffer.from([\n    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20\n  ]);\n  const digestInfo = Buffer.concat([digestInfoPrefix, hash]);\n  const k = 256; \n  const psSize = k - 3 - digestInfo.length;\n  const ps = Buffer.alloc(psSize, 0xFF);\n  const paddedBlock = Buffer.concat([\n    Buffer.from([0x00, 0x01]),\n    ps,\n    Buffer.from([0x00]),\n    digestInfo\n  ]);\n  const m = BigInt('0x' + paddedBlock.toString('hex'));\n  const s = modPow(m, d, n);\n  const sigBuf = bigIntToBuffer(s, k);\n  return base64UrlEncode(sigBuf);\n}\n\nconst header = { alg: \"RS256\", typ: \"JWT\" };\nconst now = Math.floor(Date.now() / 1000);\nconst payload = {\n  iss: client_email,\n  scope: \"https://www.googleapis.com/auth/spreadsheets\",\n  aud: \"https://oauth2.googleapis.com/token\",\n  exp: now + 3600,\n  iat: now\n};\n\nconst encodedHeader = base64UrlEncode(Buffer.from(JSON.stringify(header)));\nconst encodedPayload = base64UrlEncode(Buffer.from(JSON.stringify(payload)));\nconst signatureInput = encodedHeader + \".\" + encodedPayload;\nconst signature = signRS256(signatureInput, n_b64, d_b64);\nconst jwt = signatureInput + \".\" + signature;\n\nreturn [{\n  json: {\n    jwt: jwt,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "jwt-8lt56",
+      "name": "Generar JWT Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://oauth2.googleapis.com/token",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "=grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion={{ $json.jwt }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "id": "oauth-itmiw",
+      "name": "Intercambiar Token Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!A:L:append?valueInputOption=USER_ENTERED",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Intercambiar Token Sheets').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"values\": [\n    [\n      \"{{ new Date($('Webhook Lead DOOH').item.json.body.timestamp || Date.now()).toLocaleString('sv-SE', { timeZone: 'America/Caracas' }) }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.screen_id }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.nombre }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.empresa }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.email }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.tipo_dispositivo }}\",\n      \"{{ $('Crear lead en Kommo').item.json.id || '' }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.consentimiento == true || $('Webhook Lead DOOH').item.json.body.consentimiento === 'true' ? 'esperando_chat' : 'sin_consentimiento' }}\",\n      \"\",\n      \"{{ $('Crear lead en Kommo').item.json.contact_id || '' }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.consentimiento == true || $('Webhook Lead DOOH').item.json.body.consentimiento === 'true' ? 'Sí' : 'No' }}\",\n      \"{{ $('Webhook Lead DOOH').item.json.body.ref_code }}\"\n    ]\n  ]\n}"
+      },
+      "id": "sheets-log-2",
+      "name": "Log en Google Sheets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-resend-status",
+      "name": "Check Resend Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1580,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!M{{ $('Log en Google Sheets').item.json.updates.updatedRange.split('!A')[1].split(':')[0] }}?valueInputOption=USER_ENTERED",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Intercambiar Token Sheets').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"values\": [[\"enviado\"]]\n}",
+        "options": {}
+      },
+      "id": "log-email-success",
+      "name": "Log Email Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/1vrWnwJtJKi0HfLxi4LNXxAYf0ggt1gsVAFzE8cnJo4I/values/Leads!M{{ $('Log en Google Sheets').item.json.updates.updatedRange.split('!A')[1].split(':')[0] }}?valueInputOption=USER_ENTERED",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Intercambiar Token Sheets').item.json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"values\": [[\"error\"]]\n}",
+        "options": {}
+      },
+      "id": "log-email-error",
+      "name": "Log Email Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        300
+      ]
     }
   ],
   "connections": {
@@ -181,7 +374,7 @@
       "main": [
         [
           {
-            "node": "Log en Google Sheets",
+            "node": "Generar JWT Sheets",
             "type": "main",
             "index": 0
           }
@@ -203,7 +396,7 @@
       "main": [
         [
           {
-            "node": "Descargar Brief PDF",
+            "node": "Enviar brief por Resend",
             "type": "main",
             "index": 0
           }
@@ -211,11 +404,51 @@
         []
       ]
     },
-    "Descargar Brief PDF": {
+    "Generar JWT Sheets": {
       "main": [
         [
           {
-            "node": "Enviar brief por Resend",
+            "node": "Intercambiar Token Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intercambiar Token Sheets": {
+      "main": [
+        [
+          {
+            "node": "Log en Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar brief por Resend": {
+      "main": [
+        [
+          {
+            "node": "Check Resend Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Resend Status": {
+      "main": [
+        [
+          {
+            "node": "Log Email Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Email Error",
             "type": "main",
             "index": 0
           }
